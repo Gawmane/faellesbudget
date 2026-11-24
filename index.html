@@ -738,7 +738,9 @@ function rowsFor(Y,m){
 function payStatus(Y,m){
   const ch=state.checks[mKey(Y,m)]||{};
   let tot=0,e=0,l=0,n=0,done=0;
-  rowsFor(Y,m).forEach(s=>s.rows.forEach(r=>{if(r.pending)return;n++;tot+=r.amt;const c=ch[r.key];if(c){done++;c.by==='Leon'?l+=r.amt:e+=r.amt;}}));
+  /* Beløbet fordeles efter hvem posten tilhører – ikke hvem der satte fluebenet. Fælles poster deles 50/50. */
+  rowsFor(Y,m).forEach(s=>s.rows.forEach(r=>{if(r.pending)return;n++;tot+=r.amt;const c=ch[r.key];if(c){done++;
+    if(s.g==='emilie')e+=r.amt;else if(s.g==='leon')l+=r.amt;else{e+=r.amt/2;l+=r.amt/2;}}}));
   return {tot,e,l,n,done};
 }
 const notesFor=(Y,m,row)=>state.notes.filter(n=>n.month===mKey(Y,m)&&(n.row??null)===row);
@@ -751,7 +753,7 @@ function checkView(){
   const pct=v=>st.tot?v/st.tot*100:0;
   return `<div class="back"><h2>Tjekliste</h2></div>
   <div class="card">
-    <div class="row"><p class="label">Betalt i ${mName(Y,m)}</p>${monthNav()}</div>
+    <div class="row"><p class="label">Betalt i ${mName(Y,m)} · fælles poster deles 50/50</p>${monthNav()}</div>
     <p class="big" style="font-size:24px">${kr(st.e+st.l)} <span class="label" style="font-size:15px;font-weight:400">af ${kr(st.tot)}</span></p>
     <div class="progress"><div style="width:${pct(st.e)}%;background:var(--emilie)"></div><div style="width:${pct(st.l)}%;background:var(--leon)"></div></div>
     <div class="row" style="font-size:13px;flex-wrap:wrap">
@@ -768,7 +770,7 @@ function checkView(){
       return `<div class="item ${c?'done':''}" data-row="${r.key}" data-rowname="${esc(r.name)}">
         <button class="chk ${c?pCls(c.by):''}" data-chk="${r.key}" aria-label="${c?'Fjern flueben':'Marker som betalt'}: ${esc(r.name)}">${c?(c.by==='Leon'?'L':'E'):''}</button>
         <div class="nm"><span>${esc(r.name)}</span>${ns.length?'<i class="ti ti-message noteicon"></i>':''}
-          <div class="sub">${c?`<span class="who-${pCls(c.by)}">Betalt af ${esc(c.by)}</span> · ${shortDate(c.at)}`:'Tryk for at tilføje en note'}</div>
+          <div class="sub">${c?`<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:'Tryk for at tilføje en note'}</div>
           ${ns.map(noteHtml).join('')}
         </div>
         <div class="v">${kr2(r.amt)}</div>
@@ -799,7 +801,7 @@ function addNote(text,row){
 function openRowNote(key,name){
   const Y=selY(),m=selM(),c=(state.checks[mKey(Y,m)]||{})[key];
   sh.innerHTML=`<h3>${esc(name)}</h3>
-    <p class="label" style="margin:-8px 0 14px">${MONTHS[m]} ${Y}${c?` · betalt af ${esc(c.by)} ${shortDate(c.at)}`:' · ikke betalt endnu'}</p>
+    <p class="label" style="margin:-8px 0 14px">${MONTHS[m]} ${Y}${c?` · afkrydset af ${esc(c.by)} ${shortDate(c.at)}`:' · ikke afkrydset endnu'}</p>
     ${notesFor(Y,m,key).map(noteHtml).join('')}
     <div class="field" style="margin-top:12px"><label for="rNote">Ny note</label><textarea id="rNote" placeholder="Fx Betales først d. 15., når lønnen er gået ind"></textarea></div>
     <div class="btns"><button class="btn sec" id="rCancel">Luk</button><button class="btn pri" id="rSave">Gem note</button></div>`;
@@ -871,7 +873,7 @@ function openBill(x,Y,m,fromCheck){
     <p class="label" style="margin:-8px 0 16px">Trækkes i ${mName(Y,m)} · overføres ${transferDay(Y,m)}</p>
     <div class="field"><label for="bAmt">Regningens beløb</label><input id="bAmt" type="number" inputmode="decimal" step="0.01" value="${has(v)?+v:''}" placeholder="Fx 1.081,90"></div>
     <div class="field"><label for="bCov">Regningen dækker</label><select id="bCov">${opts.map(i=>{const f=fromIdx(i);return `<option value="${i}" ${i===c?'selected':''}>${MONTHS[f.m]} ${f.Y}</option>`;}).join('')}</select></div>
-    ${fromCheck?`<label style="display:flex;align-items:center;gap:10px;font-size:15px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="bPaid" checked style="width:22px;height:22px;accent-color:${state.me==='Leon'?'var(--leon)':'var(--emilie)'}"> Marker som betalt af ${esc(state.me)}</label>`:''}
+    ${fromCheck?`<label style="display:flex;align-items:center;gap:10px;font-size:15px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="bPaid" checked style="width:22px;height:22px;accent-color:${state.me==='Leon'?'var(--leon)':'var(--emilie)'}"> Kryds af som betalt</label>`:''}
     <p class="label err" id="bErr">Indtast et beløb</p>
     <div class="btns">
       ${has(v)?'<button class="btn del" id="bDel" aria-label="Fjern beløb"><i class="ti ti-trash"></i></button>':''}
