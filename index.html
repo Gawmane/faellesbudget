@@ -370,11 +370,21 @@ function freqText(x,Y){
   if(!irregular(a))return 'Hver måned';
   return nz.map(([,i])=>M3[i]).join(', ');
 }
+/* Danske bankdage: weekender og bankernes lukkedage (helligdage, 24.-26./31. dec., 1. jan., 5. juni) */
+function easter(Y){const a=Y%19,b=Math.floor(Y/100),c=Y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return new Date(Y,mo-1,da);}
+function isBankDay(d){
+  if(d.getDay()===0||d.getDay()===6)return false;
+  const md=(d.getMonth()+1)+'-'+d.getDate();
+  if(['1-1','6-5','12-24','12-25','12-26','12-31'].includes(md))return false;
+  const e=easter(d.getFullYear()),diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-e)/864e5);
+  return ![-3,-2,1,39,40,50].includes(diff); /* skærtors., langfre., 2. påskedag, Kr. himmelfart (+dagen efter), 2. pinsedag */
+}
 function lastWorkday(Y,m){
   const d=new Date(Y,m+1,0);
-  while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);
+  while(!isBankDay(d))d.setDate(d.getDate()-1);
   return ['søn.','man.','tirs.','ons.','tors.','fre.','lør.'][d.getDay()]+' '+d.getDate()+'. '+M3[m];
 }
+const forMonth=(Y,m)=>MONTHS[(m+1)%12].toLowerCase()+(m===11?' '+(Y+1):'');
 const mName=(Y,m)=>MONTHS[m].toLowerCase()+(Y!==CUR_Y?' '+Y:'');
 const idxName=i=>{const {Y,m}=fromIdx(i);return mName(Y,m);};
 function when(ts){const d=new Date(ts);return d.getDate()+'. '+M3[d.getMonth()]+' kl. '+String(d.getHours()).padStart(2,'0')+'.'+String(d.getMinutes()).padStart(2,'0');}
@@ -426,7 +436,7 @@ function home(){
       <div><p class="label">Indbetaling i ${mName(Y,m)}</p><p class="big">${kr(t)}</p></div>
       ${extra.length?`<span class="pill">+ ${esc(extra.join(', '))}</span>`:''}
     </div>
-    <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${lastWorkday(Y,m)}${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
+    <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${lastWorkday(Y,m)} · dækker ${forMonth(Y,m)}${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
     ${(()=>{const st=payStatus(Y,m);if(!st.done)return '';const nN=state.notes.filter(n=>n.month===mKey(Y,m)).length;return `<p class="label" data-go2="check" style="margin-top:6px;cursor:pointer"><i class="ti ti-checklist"></i> Betalt ${kr(st.e+st.l)} af ${kr(st.tot)} · <span class="who-e">E ${kr(st.e)}</span> · <span class="who-l">L ${kr(st.l)}</span>${nN?` · ${nN} ${nN===1?'note':'noter'}`:''} <i class="ti ti-chevron-right"></i></p>`;})()}
     ${miss.length?`<div class="await" data-open="forbrug"><i class="ti ti-hourglass-high"></i><div style="flex:1"><b>Afventer: ${esc(miss.join(', '))}</b><br>Beløbet kommer oveni, når regningen er tastet ind</div><i class="ti ti-chevron-right"></i></div>`:''}
     <div class="bars">${MONTHS.map((_,i)=>{
