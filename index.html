@@ -473,8 +473,8 @@ function home(){
     ${['emilie','leon'].map(p=>{const G=GROUPS[p];return `
     <div class="card tile" data-open="${p}">
       <div class="avatar" style="background:${G.soft};color:${G.color}">${G.initial}</div>
-      <h3>${G.name}</h3><p class="label">${items(p).length} poster</p>
-      <div class="amt">${kr(pays(p,Y,m))}</div>
+      <h3><span style="font-weight:400;color:var(--muted);font-size:14px;display:block">Overfør</span>${G.name}</h3><p class="label">${items(p).length} poster</p>
+      <div class="amt" style="font-size:18px">${kr2(pays(p,Y,m))}</div>
     </div>`}).join('')}
     <div class="card tile wide" data-open="bolig">
       <i class="ti ti-home"></i>
