@@ -105,6 +105,11 @@ nav.bottom button{border:0;background:none;display:flex;flex-direction:column;al
 .note .x.armed,.btn.del.armed{background:#b3402f;color:#fff;font-size:13px;font-weight:600}
 .btn.del.armed{padding:14px 14px}
 .noteicon{font-size:15px;color:var(--muted);margin-left:4px;vertical-align:-2px}
+.xfer{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.xfer:first-of-type{margin-top:8px}
+.xfer b{font-size:15px}
+.xfer .sub{font-size:12px;color:var(--muted);line-height:1.4;margin-top:2px}
+.xamt{font-size:20px;font-weight:700;white-space:nowrap}
 .progress{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--line);margin:12px 0 8px}
 textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-family:inherit;resize:vertical;min-height:70px}
 nav.bottom button i{font-size:24px}
@@ -752,9 +757,22 @@ function checkView(){
   if(!active(Y,m))return `<div class="back"><h2>Tjekliste</h2></div><div class="card"><p class="empty">Måneden ligger før budgettets start</p></div>`;
   const k=mKey(Y,m),ch=state.checks[k]||{},st=payStatus(Y,m);
   const pct=v=>st.tot?v/st.tot*100:0;
+  const bo=sumG('bolig',Y,m)/2,fo=sumG('forbrug',Y,m)/2,ex=exSum(Y,m)/2,miss=missing(Y,m).map(x=>x.name);
+  const xferRow=p=>{const G=GROUPS[p];return `<div class="xfer">
+      <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${G.soft};color:${G.color}">${G.initial}</div>
+      <div style="flex:1;min-width:0"><b>Overfør ${G.name}</b>
+        <div class="sub">${[['Egne',sumG(p,Y,m)],['½ bolig',bo],['½ forbrug',fo],['½ uforudset',ex]].filter(([,v])=>v>0).map(([l,v])=>`${l} ${kr2(v)}`).join(' + ')}</div></div>
+      <div class="xamt">${kr2(pays(p,Y,m))}</div></div>`;};
   return `<div class="back"><h2>Tjekliste</h2></div>
+  <div class="card xfercard">
+    <div class="row"><p class="label">Overførsel til ${mName(Y,m)} · ${transferDay(Y,m)}</p>${monthNav()}</div>
+    ${xferRow('emilie')}${xferRow('leon')}
+    <div class="row" style="margin-top:10px;font-size:14px"><span>I alt til fælleskontoen</span><b>${kr2(total(Y,m))}</b></div>
+    ${miss.length?`<p class="label" style="color:var(--warn);margin-top:8px"><i class="ti ti-hourglass-high"></i> ${esc(miss.join(' og '))} mangler, så beløbene stiger, når regningen er tastet ind</p>`:''}
+    ${isTrial(Y,m)?`<p class="label" style="margin-top:8px">${TRIAL_PILL}</p>`:''}
+  </div>
   <div class="card">
-    <div class="row"><p class="label">Betalt i ${mName(Y,m)} · fælles poster deles 50/50</p>${monthNav()}</div>
+    <p class="label">Betalt i ${mName(Y,m)} · fælles poster deles 50/50</p>
     <p class="big" style="font-size:24px">${kr(st.e+st.l)} <span class="label" style="font-size:15px;font-weight:400">af ${kr(st.tot)}</span></p>
     <div class="progress"><div style="width:${pct(st.e)}%;background:var(--emilie)"></div><div style="width:${pct(st.l)}%;background:var(--leon)"></div></div>
     <div class="row" style="font-size:13px;flex-wrap:wrap">
