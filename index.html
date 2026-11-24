@@ -387,6 +387,12 @@ const irregular=a=>new Set(a.map(Number)).size>1;
 const monthsOf=(Y,f)=>MONTHS.map((_,m)=>m).filter(m=>f(Y,m));
 const sumOver=(Y,ms,f)=>ms.reduce((s,m)=>s+f(Y,m),0);
 
+/* Trækdag: fast dato (1-31) eller 'last' = sidste bankdag */
+const dayTxt=x=>x.day==='last'?'sidste bankdag':x.day?`d. ${x.day}.`:'';
+const dayNum=x=>x.day==='last'?31.5:x.day?+x.day:99;
+const dayPrefix=x=>x.day?`<i class="ti ti-calendar-event" style="font-size:12px"></i> ${dayTxt(x)} · `:'';
+const daySelect=(id,cur)=>`<select id="${id}"><option value="">Ingen fast dato</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${+cur===i+1?'selected':''}>d. ${i+1}.</option>`).join('')}<option value="last" ${cur==='last'?'selected':''}>Sidste bankdag</option></select>`;
+const readDay=v=>v==='last'?'last':v?+v:null;
 function freqText(x,Y){
   if(x.v)return 'Indtastes når regningen kommer';
   const a=fixedArr(x,Y);const nz=a.map((v,i)=>[+v,i]).filter(([v])=>v);
@@ -514,13 +520,13 @@ function itemRow(x){
     if(!active(Y,m))return `<div class="item dim"><i class="ti ${x.icon} ic"></i><div class="nm">${esc(x.name)}<div class="sub">Før budgettets start</div></div></div>`;
     return `<div class="item" data-edit="${x.id}">
     <i class="ti ${x.icon||'ti-receipt'} ic"></i>
-    <div class="nm">${esc(x.name)}<div class="sub">${has(v)?`Regning for ${idxName(c??idx(Y,m)-1)}`:(realized(Y,m)?'Afventer regning':'Regningen er ikke kommet endnu')}</div></div>
+    <div class="nm">${esc(x.name)}<div class="sub">${dayPrefix(x)}${has(v)?`Regning for ${idxName(c??idx(Y,m)-1)}`:(realized(Y,m)?'Afventer regning':'Regningen er ikke kommet endnu')}</div></div>
     ${has(v)?`<div class="v">${kr2(+v)}${halfSub(v)}</div>`:`<span class="pill">Indtast</span>`}
   </div>`;
   }
   return `<div class="item" data-edit="${x.id}">
     <i class="ti ${x.icon||'ti-receipt'} ic"></i>
-    <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}${x.by?` · rettet af ${esc(x.by)}`:''}</div></div>
+    <div class="nm">${esc(x.name)}<div class="sub">${dayPrefix(x)}${freqText(x,Y)}${x.by?` · rettet af ${esc(x.by)}`:''}</div></div>
     <div class="v">${kr2(val(x,Y,m))}${GROUPS[x.g]?.shared?halfSub(val(x,Y,m)):''}</div>
   </div>`;
 }
@@ -649,7 +655,7 @@ function allItems(){
     const amt=x.v?(has(v)?kr2(+v):(realized(Y,m)?'<span class="pill">Afventer</span>':'<span class="label">–</span>')):kr2(v);
     return `<div class="item${!x.v&&!v?' dim':''}" data-edit="${x.id}">
       <i class="ti ${x.icon||'ti-receipt'} ic"></i>
-      <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}</div></div>
+      <div class="nm">${esc(x.name)}<div class="sub">${dayPrefix(x)}${freqText(x,Y)}</div></div>
       <div class="v">${amt}${GROUPS[x.g]?.shared?halfSub(v):''}</div></div>`;
   };
   return `<div class="back"><h2>Alle poster</h2></div>
@@ -743,10 +749,10 @@ const shortDate=ts=>{const d=new Date(ts);return d.getDate()+'. '+M3[d.getMonth(
 function rowsFor(Y,m){
   const secs=[];
   for(const g of ['emilie','leon','bolig']){
-    const rows=items(g).map(x=>({key:x.id,name:x.name,icon:x.icon,amt:val(x,Y,m)})).filter(r=>r.amt>0);
+    const rows=items(g).map(x=>({key:x.id,name:x.name,icon:x.icon,amt:val(x,Y,m),x})).filter(r=>r.amt>0).sort((a,b)=>dayNum(a.x)-dayNum(b.x));
     if(rows.length)secs.push({title:GROUPS[g].name,g,rows});
   }
-  const fr=items('forbrug').map(x=>{const v=val(x,Y,m);return {key:x.id,name:x.name,icon:x.icon,amt:has(v)?+v:null,pending:!has(v)};}).filter(r=>r.pending||r.amt>0);
+  const fr=items('forbrug').map(x=>{const v=val(x,Y,m);return {key:x.id,name:x.name,icon:x.icon,amt:has(v)?+v:null,pending:!has(v),x};}).filter(r=>r.pending||r.amt>0).sort((a,b)=>dayNum(a.x)-dayNum(b.x));
   if(fr.length)secs.push({title:'Forbrug',g:'forbrug',rows:fr});
   const ex=extrasOf(Y,m).map(e=>({key:'x:'+e.id,name:e.name,icon:e.icon||'ti-tool',amt:+e.amount}));
   if(ex.length)secs.push({title:'Uforudsete',g:'ekstra',rows:ex});
@@ -810,7 +816,7 @@ function checkView(){
       return `<div class="item ${c?'done':''}" data-row="${r.key}" data-rowname="${esc(r.name)}">
         <button class="chk ${c?pCls(c.by):''}" data-chk="${r.key}" aria-label="${c?'Fjern flueben':'Marker som betalt'}: ${esc(r.name)}">${c?(c.by==='Leon'?'L':'E'):''}</button>
         <div class="nm"><span>${esc(r.name)}</span>${ns.length?'<i class="ti ti-message noteicon"></i>':''}
-          <div class="sub">${c?`<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:'Tryk for at tilføje en note'}</div>
+          <div class="sub">${c?`${r.x?dayPrefix(r.x):''}<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:(r.x?.day?`${dayPrefix(r.x).replace(/ · $/,'')}`:'Tryk for at tilføje en note')}</div>
           ${ns.map(noteHtml).join('')}
         </div>
         <div class="v">${kr2(r.amt)}${GROUPS[s.g]?.shared||s.g==='ekstra'?halfSub(r.amt):''}</div>
@@ -944,6 +950,7 @@ function openBill(x,Y,m,fromCheck){
     <h3>${esc(x.name)}</h3>
     <p class="label" style="margin:-8px 0 16px">Trækkes i ${mName(Y,m)} · overføres ${transferDay(Y,m)}</p>
     <div class="field"><label for="bAmt">Regningens beløb</label><input id="bAmt" type="number" inputmode="decimal" step="0.01" value="${has(v)?+v:''}" placeholder="Fx 1.081,90"></div>
+    <div class="field"><label for="bDay">Trækkes normalt fra kontoen</label>${daySelect('bDay',x.day)}</div>
     <div class="field"><label for="bCov">Regningen dækker</label><select id="bCov">${opts.map(i=>{const f=fromIdx(i);return `<option value="${i}" ${i===c?'selected':''}>${MONTHS[f.m]} ${f.Y}</option>`;}).join('')}</select></div>
     ${fromCheck?`<label style="display:flex;align-items:center;gap:10px;font-size:15px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="bPaid" checked style="width:22px;height:22px;accent-color:${state.me==='Leon'?'var(--leon)':'var(--emilie)'}"> Kryds af som betalt</label>`:''}
     <p class="label err" id="bErr">Indtast et beløb</p>
@@ -964,7 +971,7 @@ function openBill(x,Y,m,fromCheck){
     if(raw===''||isNaN(parseFloat(raw))){q('bErr').style.display='block';return;}
     ensure();
     const amt=Math.max(0,parseFloat(raw)),cov=+q('bCov').value;
-    x.years[Y][m]=amt;x.cover[Y][m]=cov;x.by=state.me;x.at=Date.now();
+    x.years[Y][m]=amt;x.cover[Y][m]=cov;x.day=readDay(q('bDay').value);x.by=state.me;x.at=Date.now();
     addLog(`${x.name}: ${idxName(cov)}-regning på ${kr2(amt)} overføres i ${mName(Y,m)}`);
     const paid=q('bPaid')?.checked;
     if(paid){const k=mKey(Y,m);state.checks[k]??={};state.checks[k][x.id]={by:state.me,at:Date.now()};addLog(`Markerede ${x.name} som betalt (${mName(Y,m)})`);}
@@ -998,6 +1005,7 @@ function openSheet(x,g){
       <div class="inline"><input id="fAll" type="number" inputmode="decimal" placeholder="${irregular(a)?'Forskellige beløb':(+a[0]||0)}"><button id="fApply">Brug</button></div></div>
     <div class="field"><label>Beløb pr. måned i ${Y}</label>
       <div class="mgrid">${MONTHS.map((n,m)=>`<div><span>${n}</span><input type="number" inputmode="decimal" step="0.01" data-mi="${m}" value="${+a[m]||''}" placeholder="0" ${active(Y,m)?'':'disabled title="Før budgettets start"'}></div>`).join('')}</div></div>
+    <div class="field"><label for="fDay">Trækkes fra kontoen</label>${daySelect('fDay',x?.day)}</div>
     <p class="label">Ændringer gælder for ${Y} og fortsætter i de næste år, indtil I retter dem igen.</p>
     ${x&&x.by?`<p class="label" style="margin-top:6px">Sidst rettet af ${esc(x.by)} · ${when(x.at)}</p>`:''}
     <p class="label err" id="fErr"></p>
@@ -1019,18 +1027,19 @@ function openSheet(x,g){
     const name=q('fName').value.trim();
     if(!name){q('fErr').textContent='Giv posten et navn';q('fErr').style.display='block';return;}
     const na=[...sh.querySelectorAll('[data-mi]')].map(i=>Math.max(0,parseFloat(i.value.replace(',','.'))||0));
-    const now=Date.now();
+    const now=Date.now(),day=readDay(q('fDay').value);
     if(isNew){
-      state.items.push({g,name,icon:'ti-receipt',years:{[Y]:na},id:'n'+now,by:state.me,at:now});
+      state.items.push({g,name,icon:'ti-receipt',years:{[Y]:na},day,id:'n'+now,by:state.me,at:now});
       addLog(`Tilføjede ${name} (${GROUPS[g].name})`);
     }else{
       const changes=[];
       if(name!==x.name)changes.push(`omdøbte "${x.name}" til "${name}"`);
+      if((day??null)!==(x.day??null))changes.push(`${name}: trækkes ${day?dayTxt({day}):'uden fast dato'}`);
       if(na.some((v,i)=>v!==(+a[i]||0))){
         changes.push(!irregular(na)&&!irregular(a)?`${name}: ${kr2(+a[0]||0)} → ${kr2(na[0])} pr. md`:`${name}: nye månedsbeløb for ${Y}`);
       }
       if(!changes.length){closeSheet();return;}
-      x.name=name;x.years[Y]=na;x.by=state.me;x.at=now;
+      x.name=name;x.years[Y]=na;x.day=day;x.by=state.me;x.at=now;
       addLog(changes.join(', ').replace(/^./,c=>c.toUpperCase()));
     }
     save();closeSheet();render();toast('Gemt');
