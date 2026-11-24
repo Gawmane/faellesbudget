@@ -110,6 +110,11 @@ nav.bottom button{border:0;background:none;display:flex;flex-direction:column;al
 .xfer b{font-size:15px}
 .xfer .sub{font-size:12px;color:var(--muted);line-height:1.4;margin-top:2px}
 .xamt{font-size:20px;font-weight:700;white-space:nowrap}
+.adjlist{margin-top:12px;border-top:1px solid var(--line);padding-top:6px}
+.adj{display:flex;align-items:center;gap:10px;padding:8px 0;font-size:14px;cursor:pointer}
+.adj i{font-size:20px}
+.adj .sub{font-size:12px;color:var(--muted)}
+.adjbtn{border:0;background:none;color:var(--accent);font-weight:600;font-size:14px;padding:8px 0;cursor:pointer;display:flex;align-items:center;gap:6px}
 .progress{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--line);margin:12px 0 8px}
 textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-family:inherit;resize:vertical;min-height:70px}
 nav.bottom button i{font-size:24px}
@@ -247,15 +252,16 @@ function fresh(){
    Hver post, uforudset udgift, note, logpost og hver måneds flueben er sit eget dokument.
    save() sammenligner med det, der sidst blev synkroniseret, og skriver kun det, der er ændret.
    Så kan Emilie og Leon rette forskellige ting samtidig uden at overskrive hinanden. */
-let state={me:'',items:[],extras:[],log:[],checks:{},notes:[]};
+let state={me:'',items:[],extras:[],log:[],checks:{},notes:[],adjust:[]};
 const COLS={
   items:{get:()=>state.items,arr:true},
+  adjust:{get:()=>state.adjust,arr:true},  /* omregning: {y,m,text,amount,kind:'extra'|'short',split:'both'|'emilie'|'leon',by,at} */
   extras:{get:()=>state.extras,arr:true},
   notes:{get:()=>state.notes,arr:true},
   log:{get:()=>state.log,arr:true},
   checks:{get:()=>Object.entries(state.checks).map(([id,v])=>({id,v})),arr:false}
 };
-const synced={items:new Map(),extras:new Map(),notes:new Map(),log:new Map(),checks:new Map()};
+const synced={items:new Map(),extras:new Map(),notes:new Map(),log:new Map(),checks:new Map(),adjust:new Map()};
 const strip=o=>JSON.parse(JSON.stringify(o));
 const docData=(c,o)=>{if(c==='checks')return {v:strip(o.v)};const {id,...rest}=o;return strip(rest);};
 let saving=Promise.resolve();
@@ -297,8 +303,8 @@ async function startSync(){
     await batch.commit();
   }
   const ready=new Set();
-  const done=c=>{ready.add(c);if(ready.size===5&&!booted){booted=true;showApp();}else if(booted)renderKeep();};
-  for(const c of ['items','extras','notes','checks']){
+  const done=c=>{ready.add(c);if(ready.size===6&&!booted){booted=true;showApp();}else if(booted)renderKeep();};
+  for(const c of ['items','extras','notes','checks','adjust']){
     unsubs.push(onSnapshot(collection(db,c),{includeMetadataChanges:false},s=>{applySnap(c,s);done(c);},err));
   }
   unsubs.push(onSnapshot(query(collection(db,'log'),orderBy('at','desc'),limit(300)),s=>{applySnap('log',s);done('log');},err));
@@ -325,7 +331,7 @@ const loginScreen=()=>gate(`<div class="glogo"><i class="ti ti-wallet"></i></div
 onAuthStateChanged(auth,async user=>{
   unsubs.forEach(u=>u());unsubs=[];booted=false;
   for(const c in synced)synced[c].clear();
-  if(!user){state={me:'',items:[],extras:[],log:[],checks:{},notes:[]};loginScreen();return;}
+  if(!user){state={me:'',items:[],extras:[],log:[],checks:{},notes:[],adjust:[]};loginScreen();return;}
   const who=USERS[(user.email||'').toLowerCase()];
   if(!who){gate(`<i class="ti ti-lock" style="font-size:40px"></i><h2>Ingen adgang</h2><p>${esc(user.email)} har ikke adgang til dette budget.<br>Log ind med Emilies eller Leons Google-konto.</p><button class="gbtn" data-logout>Log ud og prøv en anden konto</button>`);return;}
   state.me=who;
@@ -335,7 +341,7 @@ onAuthStateChanged(auth,async user=>{
 
 /* ---------- backup ---------- */
 function exportData(){
-  const data={exportedAt:new Date().toISOString(),exportedBy:state.me,items:state.items,extras:state.extras,checks:state.checks,notes:state.notes,log:state.log};
+  const data={exportedAt:new Date().toISOString(),exportedBy:state.me,items:state.items,extras:state.extras,checks:state.checks,notes:state.notes,adjust:state.adjust,log:state.log};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download=`faellesbudget-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();
@@ -371,6 +377,11 @@ const exSum=(Y,m)=>active(Y,m)?extrasOf(Y,m).reduce((s,e)=>s+(+e.amount||0),0):0
 const sharedSum=(Y,m)=>sumG('bolig',Y,m)+sumG('forbrug',Y,m)+exSum(Y,m);
 const pays=(p,Y,m)=>sumG(p,Y,m)+sharedSum(Y,m)/2;
 const total=(Y,m)=>pays('emilie',Y,m)+pays('leon',Y,m);
+/* Omregning: penge der allerede står på (eller mangler på) kontoen. Påvirker kun hvad der skal OVERFØRES, ikke udgifterne. */
+const adjOf=(Y,m)=>(state.adjust||[]).filter(a=>a.y===Y&&a.m===m);
+const credit=(p,Y,m)=>adjOf(Y,m).reduce((s,a)=>{const v=(+a.amount||0)*(a.kind==='short'?-1:1);return s+(a.split==='both'?v/2:a.split===p?v:0);},0);
+const xfer=(p,Y,m)=>pays(p,Y,m)-credit(p,Y,m);
+const xferTotal=(Y,m)=>xfer('emilie',Y,m)+xfer('leon',Y,m);
 const missing=(Y,m)=>active(Y,m)&&!isTrial(Y,m)&&idx(Y,m)<=CUR_IDX+1?items('forbrug').filter(x=>val(x,Y,m)==null):[];
 const irregular=a=>new Set(a.map(Number)).size>1;
 const monthsOf=(Y,f)=>MONTHS.map((_,m)=>m).filter(m=>f(Y,m));
@@ -436,7 +447,7 @@ function monthNav(){
 /* ---------- home ---------- */
 function home(){
   const Y=selY(),m=selM();
-  const t=total(Y,m),e=pays('emilie',Y,m),l=pays('leon',Y,m);
+  const t=xferTotal(Y,m),e=xfer('emilie',Y,m),l=xfer('leon',Y,m),hasAdj=adjOf(Y,m).length>0;
   const max=Math.max(...MONTHS.map((_,i)=>total(Y,i)),1);
   const extra=state.items.filter(x=>!x.v&&irregular(fixedArr(x,Y))&&val(x,Y,m)).map(x=>x.name);
   const exN=extrasOf(Y,m).length;
@@ -448,7 +459,7 @@ function home(){
     <small>Hej ${esc(state.me)}</small><h1>Fælleskontoen</h1></header>
   <div class="card overlap">
     <div class="row" style="align-items:flex-start">
-      <div><p class="label">Indbetaling til ${mName(Y,m)}</p><p class="big">${kr(t)}</p></div>
+      <div><p class="label">Indbetaling til ${mName(Y,m)}</p><p class="big">${kr(t)}</p>${hasAdj?`<p class="label">Udgifter ${kr(total(Y,m))} · ${t<total(Y,m)?`−${kr(total(Y,m)-t)} omregning`:`+${kr(t-total(Y,m))} omregning`}</p>`:''}</div>
       ${isTrial(Y,m)?TRIAL_PILL:extra.length?`<span class="pill">+ ${esc(extra.join(', '))}</span>`:''}
     </div>
     <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${transferDay(Y,m)}, så pengene er klar den 1.${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
@@ -474,7 +485,7 @@ function home(){
     <div class="card tile" data-open="${p}">
       <div class="avatar" style="background:${G.soft};color:${G.color}">${G.initial}</div>
       <h3><span style="font-weight:400;color:var(--muted);font-size:14px;display:block">Overfør</span>${G.name}</h3><p class="label">${items(p).length} poster</p>
-      <div class="amt" style="font-size:18px">${kr2(pays(p,Y,m))}</div>
+      <div class="amt" style="font-size:18px">${kr2(xfer(p,Y,m))}</div>
     </div>`}).join('')}
     <div class="card tile wide" data-open="bolig">
       <i class="ti ti-home"></i>
@@ -761,13 +772,23 @@ function checkView(){
   const xferRow=p=>{const G=GROUPS[p];return `<div class="xfer">
       <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${G.soft};color:${G.color}">${G.initial}</div>
       <div style="flex:1;min-width:0"><b>Overfør ${G.name}</b>
-        <div class="sub">${[['Egne',sumG(p,Y,m)],['½ bolig',bo],['½ forbrug',fo],['½ uforudset',ex]].filter(([,v])=>v>0).map(([l,v])=>`${l} ${kr2(v)}`).join(' + ')}</div></div>
-      <div class="xamt">${kr2(pays(p,Y,m))}</div></div>`;};
+        <div class="sub">${[['Egne',sumG(p,Y,m)],['½ bolig',bo],['½ forbrug',fo],['½ uforudset',ex]].filter(([,v])=>v>0).map(([l,v])=>`${l} ${kr2(v)}`).join(' + ')}${(()=>{const c=credit(p,Y,m);return c>0?` − omregning ${kr2(c)}`:c<0?` + omregning ${kr2(-c)}`:'';})()}</div></div>
+      <div class="xamt">${kr2(xfer(p,Y,m))}</div></div>`;};
+  const adj=adjOf(Y,m);
+  const splitTxt={both:'deles 50/50',emilie:'kun Emilie',leon:'kun Leon'};
   return `<div class="back"><h2>Tjekliste</h2></div>
   <div class="card xfercard">
     <div class="row"><p class="label">Overførsel til ${mName(Y,m)} · ${transferDay(Y,m)}</p>${monthNav()}</div>
     ${xferRow('emilie')}${xferRow('leon')}
-    <div class="row" style="margin-top:10px;font-size:14px"><span>I alt til fælleskontoen</span><b>${kr2(total(Y,m))}</b></div>
+    <div class="row" style="margin-top:10px;font-size:14px"><span>I alt til fælleskontoen</span><b>${kr2(xferTotal(Y,m))}</b></div>
+    ${adj.length?`<p class="label" style="margin-top:4px">Udgifter i alt ${kr2(total(Y,m))}${xferTotal(Y,m)<total(Y,m)?` · ${kr2(total(Y,m)-xferTotal(Y,m))} står allerede på kontoen`:` · der mangler ${kr2(xferTotal(Y,m)-total(Y,m))} på kontoen`}</p>`:''}
+    <div class="adjlist">
+      ${adj.map(a=>`<div class="adj" data-adj="${a.id}">
+        <i class="ti ${a.kind==='short'?'ti-circle-plus':'ti-circle-minus'}" style="color:${a.kind==='short'?'#b3402f':'var(--forbrug)'}"></i>
+        <div style="flex:1;min-width:0">${esc(a.text||'Omregning')}<div class="sub">${a.kind==='short'?'Mangler på kontoen':'Ekstra på kontoen'} · ${splitTxt[a.split]||''}${a.by?` · ${esc(a.by)}`:''}</div></div>
+        <b>${a.kind==='short'?'+':'−'}${kr2(+a.amount)}</b></div>`).join('')}
+      <button class="adjbtn" data-newadj><i class="ti ti-calculator"></i> Tilføj omregning</button>
+    </div>
     ${miss.length?`<p class="label" style="color:var(--warn);margin-top:8px"><i class="ti ti-hourglass-high"></i> ${esc(miss.join(' og '))} mangler, så beløbene stiger, når regningen er tastet ind</p>`:''}
     ${isTrial(Y,m)?`<p class="label" style="margin-top:8px">${TRIAL_PILL}</p>`:''}
   </div>
@@ -830,6 +851,36 @@ function openRowNote(key,name){
   sh.querySelectorAll('[data-delnote]').forEach(b=>b.onclick=()=>armed(b,()=>{delNote(b.dataset.delnote);openRowNote(key,name);}));
   setTimeout(()=>document.getElementById('rNote').focus(),50);
 }
+function openAdjust(a){
+  const isNew=!a,Y=a?a.y:selY(),m=a?a.m:selM();
+  sh.innerHTML=`<h3>${isNew?'Ny omregning':'Ret omregning'}</h3>
+    <p class="label" style="margin:-8px 0 14px">Overførslen til ${mName(Y,m)} · ${transferDay(Y,m)}. Udgifterne ændres ikke, kun hvad I skal overføre.</p>
+    <div class="field"><label for="aKind">Type</label><select id="aKind">
+      <option value="extra" ${a?.kind!=='short'?'selected':''}>Ekstra på kontoen (trækkes fra overførslen)</option>
+      <option value="short" ${a?.kind==='short'?'selected':''}>Mangler på kontoen (lægges til overførslen)</option></select></div>
+    <div class="field"><label for="aText">Beskrivelse</label><input id="aText" value="${esc(a?.text||'')}" placeholder="Fx Tilbagebetalt fejloverførsel"></div>
+    <div class="field"><label for="aAmt">Beløb</label><input id="aAmt" type="number" inputmode="decimal" step="0.01" value="${a?+a.amount:''}" placeholder="Fx 1.500"></div>
+    <div class="field"><label for="aSplit">Fordeling</label><select id="aSplit">
+      <option value="both" ${!a||a.split==='both'?'selected':''}>Deles 50/50</option>
+      <option value="emilie" ${a?.split==='emilie'?'selected':''}>Kun Emilie</option>
+      <option value="leon" ${a?.split==='leon'?'selected':''}>Kun Leon</option></select></div>
+    <p class="label err" id="aErr">Indtast et beløb</p>
+    <div class="btns">${isNew?'':'<button class="btn del" id="aDel" aria-label="Slet"><i class="ti ti-trash"></i></button>'}
+      <button class="btn sec" id="aCancel">Annuller</button><button class="btn pri" id="aSave">Gem</button></div>`;
+  bg.classList.add('open');
+  const q=id=>document.getElementById(id);
+  q('aCancel').onclick=closeSheet;
+  q('aAmt').oninput=()=>q('aErr').style.display='none';
+  if(q('aDel'))q('aDel').onclick=()=>armed(q('aDel'),()=>{state.adjust=state.adjust.filter(x=>x.id!==a.id);addLog(`Slettede omregning: ${a.text||''} (${kr2(+a.amount)}, ${mName(Y,m)})`);save();closeSheet();render();toast('Slettet');});
+  q('aSave').onclick=()=>{
+    const amt=parseFloat(q('aAmt').value.replace(',','.'));
+    if(!(amt>0)){q('aErr').style.display='block';return;}
+    const d={y:Y,m,text:q('aText').value.trim(),amount:amt,kind:q('aKind').value,split:q('aSplit').value,by:state.me,at:Date.now()};
+    if(isNew)state.adjust.push({id:'a'+d.at,...d});else Object.assign(a,d);
+    addLog(`${isNew?'Tilføjede':'Rettede'} omregning for ${mName(Y,m)}: ${d.text||'uden beskrivelse'} ${d.kind==='short'?'+':'−'}${kr2(amt)}`);
+    save();closeSheet();const sy=window.scrollY;render();window.scrollTo(0,sy);toast('Overførslen er regnet om');
+  };
+}
 function delNote(id){
   const n=state.notes.find(x=>x.id===id);if(!n)return;
   state.notes=state.notes.filter(x=>x.id!==id);addLog(`Slettede en note`);save();
@@ -868,6 +919,8 @@ function bind(){
   $$('[data-newextra]').forEach(b=>b.onclick=()=>openExtra(null));
   $$('[data-pick]').forEach(b=>b.onclick=()=>{sel=+b.dataset.pick;go('home');});
   $$('[data-pendbill]').forEach(b=>b.onclick=()=>openBill(state.items.find(i=>i.id===b.dataset.pendbill),selY(),selM(),true));
+  $$('[data-newadj]').forEach(b=>b.onclick=()=>openAdjust(null));
+  $$('[data-adj]').forEach(b=>b.onclick=()=>openAdjust(state.adjust.find(a=>a.id===b.dataset.adj)));
   $$('[data-chk]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();toggleCheck(b.dataset.chk);});
   $$('[data-row]').forEach(b=>b.onclick=ev=>{if(ev.target.closest('[data-delnote]'))return;openRowNote(b.dataset.row,b.dataset.rowname);});
   $$('[data-delnote]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();armed(b,()=>delNote(b.dataset.delnote));});
