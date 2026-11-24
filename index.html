@@ -385,6 +385,10 @@ const xferTotal=(Y,m)=>xfer('emilie',Y,m)+xfer('leon',Y,m);
 const missing=(Y,m)=>active(Y,m)&&!isTrial(Y,m)&&idx(Y,m)<=CUR_IDX+1?items('forbrug').filter(x=>val(x,Y,m)==null):[];
 const irregular=a=>new Set(a.map(Number)).size>1;
 const monthsOf=(Y,f)=>MONTHS.map((_,m)=>m).filter(m=>f(Y,m));
+/* Måneder i det rigtige budget (uden prøveperioden). Bruges til at se om en post betales hver måned. */
+const budgetMonths=Y=>{const ms=monthsOf(Y,(y,m)=>active(y,m)&&!isTrial(y,m));return ms.length?ms:monthsOf(Y,active);};
+/* "Af og til"-post: betales ikke i alle budgetmåneder i året (fx jagttegn) */
+const occasional=(x,Y)=>!x.v&&budgetMonths(Y).some(m=>!(+val(x,Y,m)));
 const sumOver=(Y,ms,f)=>ms.reduce((s,m)=>s+f(Y,m),0);
 
 /* Trækdag: fast dato (1-31) eller 'last' = sidste bankdag */
@@ -395,9 +399,9 @@ const daySelect=(id,cur)=>`<select id="${id}"><option value="">Ingen fast dato</
 const readDay=v=>v==='last'?'last':v?+v:null;
 function freqText(x,Y){
   if(x.v)return 'Indtastes når regningen kommer';
-  const a=fixedArr(x,Y);const nz=a.map((v,i)=>[+v,i]).filter(([v])=>v);
+  const ms=budgetMonths(Y);const vals=ms.map(m=>[+val(x,Y,m)||0,m]);const nz=vals.filter(([v])=>v);
   if(!nz.length)return 'Ingen beløb';
-  if(!irregular(a))return 'Hver måned';
+  if(nz.length===vals.length)return 'Hver måned';
   return nz.map(([,i])=>M3[i]).join(', ');
 }
 /* Danske bankdage: weekender og bankernes lukkedage (helligdage, 24.-26./31. dec., 1. jan., 5. juni) */
@@ -455,7 +459,7 @@ function home(){
   const Y=selY(),m=selM();
   const t=xferTotal(Y,m),e=xfer('emilie',Y,m),l=xfer('leon',Y,m),hasAdj=adjOf(Y,m).length>0;
   const max=Math.max(...MONTHS.map((_,i)=>total(Y,i)),1);
-  const extra=state.items.filter(x=>!x.v&&irregular(fixedArr(x,Y))&&val(x,Y,m)).map(x=>x.name);
+  const extra=state.items.filter(x=>occasional(x,Y)&&val(x,Y,m)).map(x=>x.name);
   const exN=extrasOf(Y,m).length;
   const miss=missing(Y,m).map(x=>x.name);
   const rm=monthsOf(Y,realized),ysum=sumOver(Y,rm,total);
@@ -466,7 +470,7 @@ function home(){
   <div class="card overlap">
     <div class="row" style="align-items:flex-start">
       <div><p class="label">Indbetaling til ${mName(Y,m)}</p><p class="big">${kr(t)}</p>${hasAdj?`<p class="label">Udgifter ${kr(total(Y,m))} · ${t<total(Y,m)?`−${kr(total(Y,m)-t)} omregning`:`+${kr(t-total(Y,m))} omregning`}</p>`:''}</div>
-      ${isTrial(Y,m)?TRIAL_PILL:extra.length?`<span class="pill">+ ${esc(extra.join(', '))}</span>`:''}
+      ${isTrial(Y,m)?TRIAL_PILL:extra.length?`<span class="pill" style="max-width:48%;overflow:hidden;text-overflow:ellipsis" title="${esc(extra.join(', '))}">+ ${esc(extra.join(', '))}</span>`:''}
     </div>
     <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${transferDay(Y,m)}, så pengene er klar den 1.${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
     ${(()=>{const st=payStatus(Y,m);if(!st.done)return '';const nN=state.notes.filter(n=>n.month===mKey(Y,m)).length;return `<p class="label" data-go2="check" style="margin-top:6px;cursor:pointer"><i class="ti ti-checklist"></i> Betalt ${kr(st.e+st.l)} af ${kr(st.tot)} · <span class="who-e">E ${kr(st.e)}</span> · <span class="who-l">L ${kr(st.l)}</span>${nN?` · ${nN} ${nN===1?'note':'noter'}`:''} <i class="ti ti-chevron-right"></i></p>`;})()}
