@@ -1,7 +1,7 @@
 // Service worker: gør at appen kan installeres og åbner hurtigt, også uden net.
 // Data synkroniseres af Firebase selv; her caches kun selve app-filerne.
 // Hæv VERSION når filerne ændres, så telefonerne henter den nye udgave.
-const VERSION = 'v12';
+const VERSION = 'v13';
 const CACHE = 'faellesbudget-' + VERSION;
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon.png'];
@@ -23,9 +23,9 @@ self.addEventListener('fetch', e => {
   const url = req.url;
   const sameOrigin = new URL(url).origin === self.location.origin;
 
-  // Egne filer: hent nyeste fra nettet, brug cachen hvis offline
+  // Egne filer: hent altid nyeste fra nettet (forbi browserens 10-min. cache), brug cachen hvis offline
   if (sameOrigin) {
-    e.respondWith(fetch(req).then(res => {
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
