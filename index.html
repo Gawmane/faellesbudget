@@ -345,6 +345,7 @@ const selY=()=>fromIdx(sel).Y, selM=()=>fromIdx(sel).m;
 /* ---------- calculations ---------- */
 const kr=v=>new Intl.NumberFormat('da-DK',{maximumFractionDigits:0}).format(Math.round(v))+' kr.';
 const kr2=v=>new Intl.NumberFormat('da-DK',{minimumFractionDigits:Math.round(v*100)%100?2:0,maximumFractionDigits:2}).format(v)+' kr.';
+const halfSub=a=>(+a>0)?`<div class="sub" style="font-weight:400">${kr2(+a/2)} hver</div>`:'';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const has=v=>v!=null&&v!=='';
 const items=g=>state.items.filter(x=>x.g===g);
@@ -498,13 +499,13 @@ function itemRow(x){
     return `<div class="item" data-edit="${x.id}">
     <i class="ti ${x.icon||'ti-receipt'} ic"></i>
     <div class="nm">${esc(x.name)}<div class="sub">${has(v)?`Regning for ${idxName(c??idx(Y,m)-1)}`:(realized(Y,m)?'Afventer regning':'Regningen er ikke kommet endnu')}</div></div>
-    ${has(v)?`<div class="v">${kr2(+v)}</div>`:`<span class="pill">Indtast</span>`}
+    ${has(v)?`<div class="v">${kr2(+v)}${halfSub(v)}</div>`:`<span class="pill">Indtast</span>`}
   </div>`;
   }
   return `<div class="item" data-edit="${x.id}">
     <i class="ti ${x.icon||'ti-receipt'} ic"></i>
     <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}${x.by?` · rettet af ${esc(x.by)}`:''}</div></div>
-    <div class="v">${kr2(val(x,Y,m))}</div>
+    <div class="v">${kr2(val(x,Y,m))}${GROUPS[x.g]?.shared?halfSub(val(x,Y,m)):''}</div>
   </div>`;
 }
 
@@ -549,7 +550,7 @@ function history(g){
     ${rows.length?rows.map(({x,Y,m,v})=>`<div class="item" data-bill="${x.id}" data-by="${Y}" data-bm="${m}">
       <i class="ti ${x.icon} ic"></i>
       <div class="nm">${esc(x.name)}<div class="sub">${idxName(x.cover?.[Y]?.[m]??idx(Y,m)-1)}-regning · trukket i ${mName(Y,m)}</div></div>
-      <div class="v">${kr2(+v)}</div></div>`).join('')
+      <div class="v">${kr2(+v)}${halfSub(v)}</div></div>`).join('')
     :'<p class="empty">Når I taster regninger ind, kan I se dem her</p>'}
     ${avg.length?`<p class="label" style="margin-top:10px">${avg.join(' · ')}</p>`:''}
   </div>`;
@@ -574,8 +575,8 @@ function extraView(){
     ${list.length?list.map(e=>{const k=idx(e.y,e.m);const h=k!==lastKey?`<p class="label" style="padding:${lastKey===null?'0':'14px'} 0 4px">${MONTHS[e.m]} ${e.y}</p>`:'';lastKey=k;return h+`
       <div class="item" data-extra="${e.id}">
         <i class="ti ${e.icon||'ti-receipt'} ic" style="color:var(--extra)"></i>
-        <div class="nm">${esc(e.name)}<div class="sub">${e.note?esc(e.note)+' · ':''}${kr2(e.amount/2)} hver${e.by?` · ${esc(e.by)}`:''}</div></div>
-        <div class="v">${kr2(+e.amount)}</div>
+        <div class="nm">${esc(e.name)}<div class="sub">${e.note?esc(e.note)+' · ':''}Deles i 2${e.by?` · ${esc(e.by)}`:''}</div></div>
+        <div class="v">${kr2(+e.amount)}${halfSub(e.amount)}</div>
       </div>`;}).join('')
     :'<p class="empty">Ingen uforudsete udgifter endnu</p>'}
   </div>
@@ -633,7 +634,7 @@ function allItems(){
     return `<div class="item${!x.v&&!v?' dim':''}" data-edit="${x.id}">
       <i class="ti ${x.icon||'ti-receipt'} ic"></i>
       <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}</div></div>
-      <div class="v">${amt}</div></div>`;
+      <div class="v">${amt}${GROUPS[x.g]?.shared?halfSub(v):''}</div></div>`;
   };
   return `<div class="back"><h2>Alle poster</h2></div>
   <div class="card" style="position:sticky;top:8px;z-index:3">
@@ -647,13 +648,13 @@ function allItems(){
   </div>`).join('')+`
   <div class="card list">
     <div class="row" style="margin-bottom:6px"><p class="label">Uforudsete</p><span class="label"><b style="color:var(--ink)">${kr(exSum(Y,m))}</b></span></div>
-    ${exMonth.map(e=>`<div class="item" data-extra="${e.id}"><i class="ti ${e.icon||'ti-tool'} ic"></i><div class="nm">${esc(e.name)}<div class="sub">Deles i 2</div></div><div class="v">${kr2(+e.amount)}</div></div>`).join('')||`<p class="empty" style="padding:8px 0">Ingen i ${mName(Y,m)}</p>`}
+    ${exMonth.map(e=>`<div class="item" data-extra="${e.id}"><i class="ti ${e.icon||'ti-tool'} ic"></i><div class="nm">${esc(e.name)}<div class="sub">Deles i 2</div></div><div class="v">${kr2(+e.amount)}${halfSub(e.amount)}</div></div>`).join('')||`<p class="empty" style="padding:8px 0">Ingen i ${mName(Y,m)}</p>`}
   </div>
   <p class="section-title">I alt for ${Y}</p>
   <div class="card list">
     <p class="label" style="margin-bottom:6px">${MONTHS[ms[0]??0]} – december ${Y}${Y===START.y?' (siden budgettet startede)':''}</p>
-    ${Object.keys(GROUPS).map(g=>`<div class="item" style="cursor:default"><i class="ti ${GROUPS[g].icon||'ti-user'} ic"></i><div class="nm">${GROUPS[g].name}<div class="sub">${g==='forbrug'?'Indtastede regninger':(GROUPS[g].shared?'Deles i 2':'Egne poster')}</div></div><div class="v">${kr(yearG(g))}</div></div>`).join('')}
-    <div class="item" style="cursor:default"><i class="ti ti-tool ic"></i><div class="nm">Uforudsete<div class="sub">Deles i 2</div></div><div class="v">${kr(exYear)}</div></div>
+    ${Object.keys(GROUPS).map(g=>`<div class="item" style="cursor:default"><i class="ti ${GROUPS[g].icon||'ti-user'} ic"></i><div class="nm">${GROUPS[g].name}<div class="sub">${g==='forbrug'?'Indtastede regninger':(GROUPS[g].shared?'Deles i 2':'Egne poster')}</div></div><div class="v">${kr(yearG(g))}${GROUPS[g].shared?halfSub(yearG(g)):''}</div></div>`).join('')}
+    <div class="item" style="cursor:default"><i class="ti ti-tool ic"></i><div class="nm">Uforudsete<div class="sub">Deles i 2</div></div><div class="v">${kr(exYear)}${halfSub(exYear)}</div></div>
     <div class="item" style="cursor:default"><i class="ti ti-sum ic"></i><div class="nm"><b>I alt</b><div class="sub">Emilie ${kr(sumOver(Y,ms,(y,i)=>pays('emilie',y,i)))} · Leon ${kr(sumOver(Y,ms,(y,i)=>pays('leon',y,i)))}</div></div><div class="v">${kr(sumOver(Y,ms,total))}</div></div>
   </div>`;
 }
@@ -773,7 +774,7 @@ function checkView(){
           <div class="sub">${c?`<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:'Tryk for at tilføje en note'}</div>
           ${ns.map(noteHtml).join('')}
         </div>
-        <div class="v">${kr2(r.amt)}</div>
+        <div class="v">${kr2(r.amt)}${GROUPS[s.g]?.shared||s.g==='ekstra'?halfSub(r.amt):''}</div>
       </div>`;}).join('')}
   </div>`).join('')}
   <div class="card">
