@@ -178,13 +178,16 @@ const M3=MONTHS.map(m=>m.slice(0,3).toLowerCase());
 const all=v=>Array(12).fill(v);
 const only=(map,fill=0)=>{const a=all(fill);for(const k in map)a[k]=map[k];return a;};
 
-/* Budgettet startede 15. september 2026. Første overførsel er sidste hverdag i september. */
-const START={y:2026,m:8};
+/* Budgettet gælder fra december 2026 (første overførsel 30. nov. 2026).
+   September-november 2026 var en prøveperiode og tælles ikke med. */
+const START={y:2026,m:11};
 const idx=(Y,m)=>Y*12+m;
 const START_IDX=idx(START.y,START.m);
 const NOW=new Date(),CUR_Y=NOW.getFullYear(),CUR_M=NOW.getMonth(),CUR_IDX=idx(CUR_Y,CUR_M);
 const active=(Y,m)=>idx(Y,m)>=START_IDX;
-const realized=(Y,m)=>active(Y,m)&&idx(Y,m)<=CUR_IDX;
+/* En måned regnes som overført, når overførselsdagen (sidste bankdag måneden før) er nået */
+const realized=(Y,m)=>active(Y,m)&&idx(Y,m)<=realMax();
+function realMax(){const t=new Date();t.setHours(0,0,0,0);return t>=lastBankDate(CUR_Y,CUR_M)?CUR_IDX+1:CUR_IDX;}
 const fromIdx=i=>({Y:Math.floor(i/12),m:i%12});
 const MAX_IDX=idx(CUR_Y+1,11);
 
@@ -379,9 +382,9 @@ function isBankDay(d){
   const e=easter(d.getFullYear()),diff=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-e)/864e5);
   return ![-3,-2,1,39,40,50].includes(diff); /* skærtors., langfre., 2. påskedag, Kr. himmelfart (+dagen efter), 2. pinsedag */
 }
+function lastBankDate(Y,m){const d=new Date(Y,m+1,0);while(!isBankDay(d))d.setDate(d.getDate()-1);return d;}
 function lastWorkday(Y,m){
-  const d=new Date(Y,m+1,0);
-  while(!isBankDay(d))d.setDate(d.getDate()-1);
+  const d=lastBankDate(Y,m);
   return ['søn.','man.','tirs.','ons.','tors.','fre.','lør.'][d.getDay()]+' '+d.getDate()+'. '+M3[m];
 }
 /* En måned = de udgifter, der trækkes i måneden. Pengene overføres sidste bankdag i måneden før. */
@@ -605,7 +608,7 @@ function openExtra(e){
     const err=t=>{q('xErr').textContent=t;q('xErr').style.display='block';};
     if(!name)return err('Skriv hvad udgiften var');
     if(!(amt>0))return err('Indtast et beløb');
-    if(!active(ny,nm))return err('Måneden ligger før budgettet startede i september 2026');
+    if(!active(ny,nm))return err('Måneden ligger før budgettet startede i december 2026');
     const now=Date.now();
     if(isNew){state.extras.push({id:'x'+now,name,icon:'ti-tool',amount:amt,y:ny,m:nm,note:q('xNote').value.trim(),by:state.me,at:now});addLog(`Tilføjede uforudset udgift: ${name} · ${kr2(amt)} (${mName(ny,nm)})`);}
     else{Object.assign(e,{name,amount:amt,y:ny,m:nm,note:q('xNote').value.trim(),by:state.me,at:now});addLog(`Rettede uforudset udgift: ${name} · ${kr2(amt)}`);}
@@ -643,7 +646,7 @@ function allItems(){
   </div>
   <p class="section-title">I alt for ${Y}</p>
   <div class="card list">
-    <p class="label" style="margin-bottom:6px">${MONTHS[ms[0]??0]} – december ${Y}${Y===START.y?' (siden I flyttede ind)':''}</p>
+    <p class="label" style="margin-bottom:6px">${MONTHS[ms[0]??0]} – december ${Y}${Y===START.y?' (siden budgettet startede)':''}</p>
     ${Object.keys(GROUPS).map(g=>`<div class="item" style="cursor:default"><i class="ti ${GROUPS[g].icon||'ti-user'} ic"></i><div class="nm">${GROUPS[g].name}<div class="sub">${g==='forbrug'?'Indtastede regninger':(GROUPS[g].shared?'Deles i 2':'Egne poster')}</div></div><div class="v">${kr(yearG(g))}</div></div>`).join('')}
     <div class="item" style="cursor:default"><i class="ti ti-tool ic"></i><div class="nm">Uforudsete<div class="sub">Deles i 2</div></div><div class="v">${kr(exYear)}</div></div>
     <div class="item" style="cursor:default"><i class="ti ti-sum ic"></i><div class="nm"><b>I alt</b><div class="sub">Emilie ${kr(sumOver(Y,ms,(y,i)=>pays('emilie',y,i)))} · Leon ${kr(sumOver(Y,ms,(y,i)=>pays('leon',y,i)))}</div></div><div class="v">${kr(sumOver(Y,ms,total))}</div></div>
@@ -678,14 +681,14 @@ function yearPage(){
   }else{
     const first=Math.max(START_IDX+12,idx(Y,0));const f=fromIdx(first);
     cmp=`<div class="card"><p class="label" style="margin-bottom:6px">Sammenligning med året før</p>
-      <p style="margin:0;font-size:14px;line-height:1.5">Budgettet startede i september ${START.y}, så der er ikke noget at sammenligne ${Y} med endnu. Fra ${MONTHS[f.m].toLowerCase()} ${f.Y} kan I se, om I bruger mere eller mindre end samme måned året før.</p></div>`;
+      <p style="margin:0;font-size:14px;line-height:1.5">Budgettet startede i ${MONTHS[START.m].toLowerCase()} ${START.y}, så der er ikke noget at sammenligne ${Y} med endnu. Fra ${MONTHS[f.m].toLowerCase()} ${f.Y} kan I se, om I bruger mere eller mindre end samme måned året før.</p></div>`;
   }
   return `<div class="back"><h2>Årsoverblik</h2></div>
   <div class="years">${yearsAvail().map(y=>`<button data-year="${y}" class="${y===Y?'on':''}">${y}</button>`).join('')}</div>
   <div class="card wrap">
     <p class="label">Jeres ${Y}${ms.length?` · ${span(ms)}`:''}</p>
     <p class="big">${kr(tot)}</p>
-    <p class="label">overført til fælleskontoen${Y===START.y?' siden I flyttede ind':''}</p>
+    <p class="label">overført til fælleskontoen${Y===START.y?' siden budgettet startede':''}</p>
     <div class="stats">
       <div><b>${ms.length?kr(tot/ms.length):'–'}</b><span>snit pr. måned</span></div>
       <div><b>${top!=null?MONTHS[top]:'–'}</b><span>dyreste måned${top!=null?' · '+kr(total(Y,top)):''}</span></div>
