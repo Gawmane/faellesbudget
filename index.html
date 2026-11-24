@@ -331,7 +331,7 @@ function exportData(){
 }
 window.app={get state(){return state;},render,save};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));
-let sel=Math.max(START_IDX,Math.min(CUR_IDX,MAX_IDX));
+let sel=Math.max(START_IDX,Math.min(CUR_IDX+1,MAX_IDX)); /* forsiden viser den måned, næste overførsel er til */
 let yearView=CUR_Y;
 const selY=()=>fromIdx(sel).Y, selM=()=>fromIdx(sel).m;
 
@@ -358,7 +358,7 @@ const exSum=(Y,m)=>active(Y,m)?extrasOf(Y,m).reduce((s,e)=>s+(+e.amount||0),0):0
 const sharedSum=(Y,m)=>sumG('bolig',Y,m)+sumG('forbrug',Y,m)+exSum(Y,m);
 const pays=(p,Y,m)=>sumG(p,Y,m)+sharedSum(Y,m)/2;
 const total=(Y,m)=>pays('emilie',Y,m)+pays('leon',Y,m);
-const missing=(Y,m)=>realized(Y,m)?items('forbrug').filter(x=>val(x,Y,m)==null):[];
+const missing=(Y,m)=>active(Y,m)&&idx(Y,m)<=CUR_IDX+1?items('forbrug').filter(x=>val(x,Y,m)==null):[];
 const irregular=a=>new Set(a.map(Number)).size>1;
 const monthsOf=(Y,f)=>MONTHS.map((_,m)=>m).filter(m=>f(Y,m));
 const sumOver=(Y,ms,f)=>ms.reduce((s,m)=>s+f(Y,m),0);
@@ -384,6 +384,8 @@ function lastWorkday(Y,m){
   while(!isBankDay(d))d.setDate(d.getDate()-1);
   return ['søn.','man.','tirs.','ons.','tors.','fre.','lør.'][d.getDay()]+' '+d.getDate()+'. '+M3[m];
 }
+/* En måned = de udgifter, der trækkes i måneden. Pengene overføres sidste bankdag i måneden før. */
+const transferDay=(Y,m)=>{const p=idx(Y,m)-1;return lastWorkday(Math.floor(p/12),p%12);};
 const forMonth=(Y,m)=>MONTHS[(m+1)%12].toLowerCase()+(m===11?' '+(Y+1):'');
 const mName=(Y,m)=>MONTHS[m].toLowerCase()+(Y!==CUR_Y?' '+Y:'');
 const idxName=i=>{const {Y,m}=fromIdx(i);return mName(Y,m);};
@@ -433,10 +435,10 @@ function home(){
     <small>Hej ${esc(state.me)}</small><h1>Fælleskontoen</h1></header>
   <div class="card overlap">
     <div class="row" style="align-items:flex-start">
-      <div><p class="label">Indbetaling i ${mName(Y,m)}</p><p class="big">${kr(t)}</p></div>
+      <div><p class="label">Indbetaling til ${mName(Y,m)}</p><p class="big">${kr(t)}</p></div>
       ${extra.length?`<span class="pill">+ ${esc(extra.join(', '))}</span>`:''}
     </div>
-    <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${lastWorkday(Y,m)} · dækker ${forMonth(Y,m)}${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
+    <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${transferDay(Y,m)}, så pengene er klar den 1.${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
     ${(()=>{const st=payStatus(Y,m);if(!st.done)return '';const nN=state.notes.filter(n=>n.month===mKey(Y,m)).length;return `<p class="label" data-go2="check" style="margin-top:6px;cursor:pointer"><i class="ti ti-checklist"></i> Betalt ${kr(st.e+st.l)} af ${kr(st.tot)} · <span class="who-e">E ${kr(st.e)}</span> · <span class="who-l">L ${kr(st.l)}</span>${nN?` · ${nN} ${nN===1?'note':'noter'}`:''} <i class="ti ti-chevron-right"></i></p>`;})()}
     ${miss.length?`<div class="await" data-open="forbrug"><i class="ti ti-hourglass-high"></i><div style="flex:1"><b>Afventer: ${esc(miss.join(', '))}</b><br>Beløbet kommer oveni, når regningen er tastet ind</div><i class="ti ti-chevron-right"></i></div>`:''}
     <div class="bars">${MONTHS.map((_,i)=>{
@@ -509,7 +511,7 @@ function group(g){
   if(G.variable){
     summary=`<p class="label">Forbrug der overføres i ${mName(Y,m)}</p><p class="big">${kr(sumG(g,Y,m))}</p>
        <div class="chips"><span class="chip">Emilie ${kr(sumG(g,Y,m)/2)}</span><span class="chip">Leon ${kr(sumG(g,Y,m)/2)}</span></div>
-       <p class="label" style="margin-top:12px">Tast regningen ind inden overførslen ${lastWorkday(Y,m)}. Indtil da tæller den med 0 kr.</p>`;
+       <p class="label" style="margin-top:12px">Tast regningen ind inden overførslen ${transferDay(Y,m)}. Indtil da tæller den med 0 kr.</p>`;
   }else if(G.shared){
     summary=`<p class="label">Bolig i ${mName(Y,m)}</p><p class="big">${kr(sumG('bolig',Y,m))}</p>
        <div class="chips"><span class="chip">Emilie ${kr(sumG('bolig',Y,m)/2)}</span><span class="chip">Leon ${kr(sumG('bolig',Y,m)/2)}</span></div>`;
@@ -539,7 +541,7 @@ function history(g){
     <p class="label" style="margin-bottom:6px">Betalte regninger</p>
     ${rows.length?rows.map(({x,Y,m,v})=>`<div class="item" data-bill="${x.id}" data-by="${Y}" data-bm="${m}">
       <i class="ti ${x.icon} ic"></i>
-      <div class="nm">${esc(x.name)}<div class="sub">${idxName(x.cover?.[Y]?.[m]??idx(Y,m)-1)}-regning · overført ${lastWorkday(Y,m)}${Y!==CUR_Y?' '+Y:''}</div></div>
+      <div class="nm">${esc(x.name)}<div class="sub">${idxName(x.cover?.[Y]?.[m]??idx(Y,m)-1)}-regning · trukket i ${mName(Y,m)}</div></div>
       <div class="v">${kr2(+v)}</div></div>`).join('')
     :'<p class="empty">Når I taster regninger ind, kan I se dem her</p>'}
     ${avg.length?`<p class="label" style="margin-top:10px">${avg.join(' · ')}</p>`:''}
@@ -858,7 +860,7 @@ function openBill(x,Y,m,fromCheck){
   const opts=[];for(let i=pay;i>=Math.max(pay-12,START_IDX-1);i--)opts.push(i);
   sh.innerHTML=`
     <h3>${esc(x.name)}</h3>
-    <p class="label" style="margin:-8px 0 16px">Overføres ${lastWorkday(Y,m)}${Y!==CUR_Y?' '+Y:''}</p>
+    <p class="label" style="margin:-8px 0 16px">Trækkes i ${mName(Y,m)} · overføres ${transferDay(Y,m)}</p>
     <div class="field"><label for="bAmt">Regningens beløb</label><input id="bAmt" type="number" inputmode="decimal" step="0.01" value="${has(v)?+v:''}" placeholder="Fx 1.081,90"></div>
     <div class="field"><label for="bCov">Regningen dækker</label><select id="bCov">${opts.map(i=>{const f=fromIdx(i);return `<option value="${i}" ${i===c?'selected':''}>${MONTHS[f.m]} ${f.Y}</option>`;}).join('')}</select></div>
     ${fromCheck?`<label style="display:flex;align-items:center;gap:10px;font-size:15px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="bPaid" checked style="width:22px;height:22px;accent-color:${state.me==='Leon'?'var(--leon)':'var(--emilie)'}"> Marker som betalt af ${esc(state.me)}</label>`:''}
