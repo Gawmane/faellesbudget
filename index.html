@@ -105,6 +105,8 @@ nav.bottom button{border:0;background:none;display:flex;flex-direction:column;al
 .note .x.armed,.btn.del.armed{background:#b3402f;color:#fff;font-size:13px;font-weight:600}
 .btn.del.armed{padding:14px 14px}
 .noteicon{font-size:15px;color:var(--muted);margin-left:4px;vertical-align:-2px}
+.daytag{display:inline-flex;align-items:center;gap:3px;background:#fde8e8;color:#e05a68;border-radius:99px;padding:1px 7px 1px 5px;font-size:11px;font-weight:600;margin-right:4px;vertical-align:1px;white-space:nowrap}
+.daytag i{font-size:12px}
 .xfer{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
 .xfer:first-of-type{margin-top:8px}
 .xfer b{font-size:15px}
@@ -394,7 +396,7 @@ const sumOver=(Y,ms,f)=>ms.reduce((s,m)=>s+f(Y,m),0);
 /* Trækdag: fast dato (1-31) eller 'last' = sidste bankdag */
 const dayTxt=x=>x.day==='last'?'sidste bankdag':x.day?`d. ${x.day}.`:'';
 const dayNum=x=>x.day==='last'?31.5:x.day?+x.day:99;
-const dayPrefix=x=>x.day?`<i class="ti ti-calendar-event" style="font-size:12px"></i> ${dayTxt(x)} · `:'';
+const dayPrefix=x=>x.day?`<span class="daytag"><i class="ti ti-calendar-event"></i>${dayTxt(x)}</span> `:'';
 const daySelect=(id,cur)=>`<select id="${id}"><option value="">Ingen fast dato</option>${Array.from({length:31},(_,i)=>`<option value="${i+1}" ${+cur===i+1?'selected':''}>d. ${i+1}.</option>`).join('')}<option value="last" ${cur==='last'?'selected':''}>Sidste bankdag</option></select>`;
 const readDay=v=>v==='last'?'last':v?+v:null;
 function freqText(x,Y){
