@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3a6f9a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Fællesbudget</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#f5f0e6; --card:#fbf9f4; --ink:#3d3a35; --muted:#8a857c; --line:#e7e1d5;
+  --accent:#3a6f9a; --accent-soft:#dce8f2; --emilie:#c4577f; --emilie-soft:#f6e1e9;
+  --leon:#3a6f9a; --leon-soft:#dce8f2; --bar:#cfc9bd; --warn-bg:#f8ecd3; --warn:#8a5a0b;
+  --extra:#c46a2b; --extra-soft:#f8e3d3; --forbrug:#5d8a5a; --bolig:#8a7a5c;
+  --shadow:0 6px 18px rgba(80,70,50,.08);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100vh}
+.app{max-width:480px;margin:0 auto;padding:0 16px 110px}
+header.hero{background:var(--accent);color:#fff;margin:0 -16px;padding:28px 20px 70px;border-bottom-right-radius:60% 40px}
+.hero small{opacity:.8;font-size:14px}
+.hero h1{margin:2px 0 0;font-size:30px;font-weight:700}
+.hero .who{float:right;background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:99px;padding:6px 12px;font-size:13px;cursor:pointer}
+.card{background:var(--card);border-radius:22px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.overlap{margin-top:-50px}
+.label{font-size:13px;color:var(--muted);margin:0}
+.big{font-size:30px;font-weight:700;margin:2px 0 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--warn-bg);color:var(--warn);white-space:nowrap}
+.bars{display:flex;align-items:flex-end;gap:6px;height:110px;margin-top:40px}
+.bars button{position:relative;flex:1;border:0;padding:0;border-radius:6px;background:var(--bar);cursor:pointer;transition:background .15s}
+.bars button:hover{background:#b9b2a4}
+.bars button.sel{background:var(--accent)}
+.bars button.miss{background:repeating-linear-gradient(135deg,var(--bar) 0 5px,#e2ddd2 5px 10px)}
+.bars button.miss.sel{background:repeating-linear-gradient(135deg,var(--accent) 0 5px,#6f98bb 5px 10px)}
+.bars button.off{background:var(--line);cursor:default}
+.bars .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:12px;line-height:1.3;padding:5px 9px;border-radius:8px;white-space:nowrap;text-align:center;opacity:0;pointer-events:none;transition:opacity .12s;z-index:2}
+.bars .tip b{display:block;font-weight:600}
+.bars .tip small{font-size:11px;opacity:.8}
+.bars button:first-child .tip,.bars button:nth-child(2) .tip{left:0;transform:none}
+.bars button:last-child .tip,.bars button:nth-last-child(2) .tip{left:auto;right:0;transform:none}
+.bars button:hover .tip,.bars button:focus-visible .tip{opacity:1}
+.await{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:10px 12px;margin-top:12px;font-size:13px;line-height:1.35;cursor:pointer}
+.await i{font-size:20px}
+.split{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:12px 0}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.tile{cursor:pointer;margin:0}
+.avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 auto}
+.tile h3{margin:12px 0 0;font-size:18px}
+.tile .amt{font-size:15px;font-weight:600;margin-top:6px;white-space:nowrap}
+.wide{grid-column:span 2;display:flex;align-items:center;gap:14px}
+.wide>i{font-size:26px;color:var(--muted)}
+.section-title{font-size:13px;color:var(--muted);margin:8px 4px 10px;text-transform:uppercase;letter-spacing:.06em}
+.extra-tile{border:2px dashed #e7c7ae;background:#fdf6f0;box-shadow:none;display:flex;align-items:center;gap:14px;cursor:pointer}
+.extra-tile .ic-wrap{width:44px;height:44px;border-radius:14px;background:var(--extra-soft);color:var(--extra);display:flex;align-items:center;justify-content:center;font-size:22px}
+.list .item{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line);cursor:pointer}
+.list .item:first-of-type{border-top:0}
+.list .item.dim{opacity:.45;cursor:default}
+.item i.ic{font-size:20px;color:var(--muted);width:24px;text-align:center}
+.item .nm{flex:1;font-size:15px;min-width:0}
+.item .sub{font-size:12px;color:var(--muted)}
+.item .v{font-size:15px;font-weight:600;text-align:right;white-space:nowrap}
+.back{display:flex;align-items:center;gap:12px;padding:22px 0 14px}
+.back button{border:0;background:var(--card);width:40px;height:40px;border-radius:50%;font-size:20px;box-shadow:var(--shadow);cursor:pointer;color:var(--ink)}
+.back h2{margin:0;font-size:24px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{font-size:13px;background:var(--bg);padding:6px 12px;border-radius:99px}
+.monthnav{display:flex;align-items:center;gap:8px}
+.monthnav button{border:0;background:var(--bg);width:32px;height:32px;border-radius:50%;cursor:pointer;color:var(--ink);font-size:16px}
+.monthnav button:disabled{opacity:.3;cursor:default}
+.add{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--accent);font-weight:600;background:none;border:2px dashed var(--line);border-radius:18px;padding:14px;width:100%;font-size:15px;cursor:pointer;margin-bottom:16px}
+.years{display:flex;gap:8px;margin-bottom:16px}
+.years button{border:0;background:var(--card);padding:8px 16px;border-radius:99px;font-size:14px;cursor:pointer;color:var(--ink);box-shadow:var(--shadow)}
+.years button.on{background:var(--accent);color:#fff}
+.wrap{background:var(--accent);color:#fff}
+.wrap .label{color:rgba(255,255,255,.75)}
+.wrap .stats{display:grid;grid-template-columns:1fr 1fr;gap:16px 12px;margin-top:18px}
+.wrap .stats b{display:block;font-size:18px}
+.wrap .stats span{font-size:12px;color:rgba(255,255,255,.75)}
+.cmp .item{cursor:default}
+.up{color:#b3402f}.down{color:#3f7a3a}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top-left-radius:28px;border-top-right-radius:28px;box-shadow:0 -4px 20px rgba(80,70,50,.08);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+nav.bottom .in{max-width:480px;margin:0 auto;display:flex;justify-content:space-around}
+nav.bottom button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:16px}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--bar);background:none;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;cursor:pointer;padding:0}
+.chk.e{background:var(--emilie);border-color:var(--emilie)}
+.chk.l{background:var(--leon);border-color:var(--leon)}
+.chk:disabled{border-style:dashed;cursor:default}
+.item.done .nm>span:first-child{text-decoration:line-through;text-decoration-color:var(--bar)}
+.who-e{color:var(--emilie)}.who-l{color:var(--leon)}
+.note{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.4;margin-top:6px;padding:7px 10px;border-radius:10px}
+.note.e{background:var(--emilie-soft)}.note.l{background:var(--leon-soft)}
+.note b{font-weight:600}.note.e b{color:var(--emilie)}.note.l b{color:var(--leon)}
+.note .x{margin-left:auto;border:0;background:none;color:var(--muted);cursor:pointer;padding:4px 6px;font-size:16px;border-radius:8px;flex:0 0 auto}
+.note .x.armed,.btn.del.armed{background:#b3402f;color:#fff;font-size:13px;font-weight:600}
+.btn.del.armed{padding:14px 14px}
+.noteicon{font-size:15px;color:var(--muted);margin-left:4px;vertical-align:-2px}
+.progress{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--line);margin:12px 0 8px}
+textarea{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-family:inherit;resize:vertical;min-height:70px}
+nav.bottom button i{font-size:24px}
+nav.bottom button.on{color:#fff;background:var(--accent)}
+.sheet-bg{position:fixed;inset:0;background:rgba(40,35,25,.4);display:none;align-items:flex-end;justify-content:center;z-index:10}
+.sheet-bg.open{display:flex}
+.sheet{background:var(--card);width:100%;max-width:480px;border-top-left-radius:26px;border-top-right-radius:26px;padding:20px 20px calc(24px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sheet h3{margin:0 0 14px;font-size:20px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+input,select{width:100%;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-family:inherit}
+.two{display:flex;gap:8px}.two>*{flex:1;min-width:0}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mgrid div span{display:block;font-size:11px;color:var(--muted);margin-bottom:2px}
+.mgrid input{padding:8px 10px;font-size:15px}
+.mgrid input:disabled{background:var(--bg)}
+.btns{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;border:0;border-radius:14px;padding:14px;font-size:15px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--accent);color:#fff}
+.btn.sec{background:var(--bg);color:var(--ink)}
+.btn.del{background:none;color:#b3402f;flex:0 0 auto;padding:14px 8px}
+.inline{display:flex;gap:8px}
+.inline input{flex:1}
+.inline button{border:0;background:var(--accent-soft);color:var(--accent);border-radius:12px;padding:0 14px;font-weight:600;cursor:pointer;white-space:nowrap}
+.err{color:#b3402f;display:none}
+.log .item{cursor:default;align-items:flex-start}
+.empty{color:var(--muted);text-align:center;padding:20px 0;font-size:14px}
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+.hero .who.armed{background:#b3402f}
+body.locked nav.bottom,body.locked .app{display:none}
+.gate{position:fixed;inset:0;background:var(--accent);color:#fff;display:none;align-items:center;justify-content:center;z-index:30;padding:24px}
+.gate-in{text-align:center;max-width:340px}
+.gate h1{font-size:32px;margin:14px 0 4px}
+.gate h2{margin:12px 0 6px}
+.gate p{opacity:.85;line-height:1.5;margin:0 0 24px}
+.glogo{width:76px;height:76px;border-radius:24px;background:rgba(255,255,255,.18);display:inline-flex;align-items:center;justify-content:center;font-size:40px}
+.gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:var(--ink);border:0;border-radius:99px;padding:14px 22px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.15)}
+</style>
+</head>
+<body>
+<div class="app" id="view"></div>
+
+<nav class="bottom"><div class="in">
+  <button data-go="home"><i class="ti ti-layout-dashboard"></i>Overblik</button>
+  <button data-go="items"><i class="ti ti-list-details"></i>Poster</button>
+  <button data-go="check"><i class="ti ti-checklist"></i>Tjekliste</button>
+  <button data-go="year"><i class="ti ti-chart-bar"></i>År</button>
+  <button data-go="log"><i class="ti ti-history"></i>Ændringer</button>
+</div></nav>
+
+<div class="sheet-bg" id="sheetBg"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="gate" id="gate"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, writeBatch, getDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+import { firebaseConfig } from './firebase-config.js';
+
+/* Kun disse to Google-konti har adgang (samme liste står i firestore.rules) */
+const USERS={'emilie.asferg@hotmail.dk':'Emilie','leonbnnb9940@gmail.com':'Leon'};
+
+const fbApp=initializeApp(firebaseConfig);
+const auth=getAuth(fbApp);
+const db=initializeFirestore(fbApp,{ignoreUndefinedProperties:true,localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+
+const MONTHS=['Januar','Februar','Marts','April','Maj','Juni','Juli','August','September','Oktober','November','December'];
+const M3=MONTHS.map(m=>m.slice(0,3).toLowerCase());
+const all=v=>Array(12).fill(v);
+const only=(map,fill=0)=>{const a=all(fill);for(const k in map)a[k]=map[k];return a;};
+
+/* Budgettet startede 15. september 2026. Første overførsel er sidste hverdag i september. */
+const START={y:2026,m:8};
+const idx=(Y,m)=>Y*12+m;
+const START_IDX=idx(START.y,START.m);
+const NOW=new Date(),CUR_Y=NOW.getFullYear(),CUR_M=NOW.getMonth(),CUR_IDX=idx(CUR_Y,CUR_M);
+const active=(Y,m)=>idx(Y,m)>=START_IDX;
+const realized=(Y,m)=>active(Y,m)&&idx(Y,m)<=CUR_IDX;
+const fromIdx=i=>({Y:Math.floor(i/12),m:i%12});
+const MAX_IDX=idx(CUR_Y+1,11);
+
+const GROUPS={
+  emilie:{name:'Emilie',initial:'E',color:'var(--emilie)',soft:'var(--emilie-soft)'},
+  leon:{name:'Leon',initial:'L',color:'var(--leon)',soft:'var(--leon-soft)'},
+  bolig:{name:'Bolig',icon:'ti-home',shared:true},
+  forbrug:{name:'Forbrug',icon:'ti-bolt',shared:true,variable:true}
+};
+
+/* Faste beløb fra fanen "Fælleskonto" i budgetskema_Sparkrondk.xlsx (2026) */
+const SEED=[
+  {g:'emilie',name:'Ulykkesforsikring',icon:'ti-shield',a:all(59)},
+  {g:'emilie',name:'HK (lønsikring, a-kasse mm)',icon:'ti-briefcase',a:all(1176)},
+  {g:'emilie',name:'Kritisk liv og sygdom',icon:'ti-heartbeat',a:all(324.75)},
+  {g:'emilie',name:'Bilforsikring',icon:'ti-car',a:all(418)},
+  {g:'leon',name:'Jagttegn + andet jagt',icon:'ti-trees',a:only({2:680,3:450})},
+  {g:'leon',name:'Sygeforsikring Danmark',icon:'ti-first-aid-kit',a:all(100)},
+  {g:'leon',name:'Fagforening + a-kasse',icon:'ti-briefcase',a:all(1093)},
+  {g:'leon',name:'Billån',icon:'ti-car',a:all(2850)},
+  {g:'leon',name:'Bilforsikring',icon:'ti-car-crash',a:all(201)},
+  {g:'leon',name:'Kritisk liv og sygdom',icon:'ti-heartbeat',a:all(293.31)},
+  {g:'bolig',name:'Kreditforening',icon:'ti-building-bank',a:only({1:4962,4:4962,7:4962,10:4962})},
+  {g:'bolig',name:'Boliglån',icon:'ti-home-dollar',a:all(1200)},
+  {g:'bolig',name:'Indboforsikring',icon:'ti-sofa',a:all(0)},
+  {g:'bolig',name:'Ejendomsforsikring',icon:'ti-shield-check',a:all(1297.96)},
+  {g:'bolig',name:'Internet',icon:'ti-wifi',a:all(375)},
+  /* Forbrug: beløb = betalte regninger i overførselsmåneden. cov = hvilken måned regningen dækker (absolut månedsindeks) */
+  {g:'forbrug',name:'El og gas',icon:'ti-bolt',v:true,a:only({8:0,9:1081.90},null),cov:only({8:idx(2026,7),9:idx(2026,8)},null)},
+  {g:'forbrug',name:'Forsyning (vand og skrald)',icon:'ti-droplet',v:true,a:only({8:0,9:248.37,10:460.12},null),cov:only({8:idx(2026,7),9:idx(2026,8),10:idx(2026,9)},null)}
+];
+const SEED_EXTRAS=[
+  {name:'Syn af brændeovn',icon:'ti-flame',amount:2473.75,y:2026,m:9},
+  {name:'Træpiller',icon:'ti-wood',amount:7000,y:2026,m:9}
+];
+
+function fresh(){
+  return{
+    me:'',
+    items:SEED.map((x,i)=>({id:'i'+i,g:x.g,name:x.name,icon:x.icon,v:!!x.v,years:{[START.y]:[...x.a]},cover:x.v?{[START.y]:[...x.cov]}:undefined,by:null,at:null})),
+    extras:SEED_EXTRAS.map((e,i)=>({id:'e'+i,...e,by:null,at:null})),
+    log:[],
+    checks:{},   /* {"2026-10": {rowKey: {by, at}}} */
+    notes:[]     /* [{id, month:"2026-10", row:rowKey|null, text, by, at}] */
+  };
+}
+/* ---------- Firestore-synkronisering ----------
+   Hver post, uforudset udgift, note, logpost og hver måneds flueben er sit eget dokument.
+   save() sammenligner med det, der sidst blev synkroniseret, og skriver kun det, der er ændret.
+   Så kan Emilie og Leon rette forskellige ting samtidig uden at overskrive hinanden. */
+let state={me:'',items:[],extras:[],log:[],checks:{},notes:[]};
+const COLS={
+  items:{get:()=>state.items,arr:true},
+  extras:{get:()=>state.extras,arr:true},
+  notes:{get:()=>state.notes,arr:true},
+  log:{get:()=>state.log,arr:true},
+  checks:{get:()=>Object.entries(state.checks).map(([id,v])=>({id,v})),arr:false}
+};
+const synced={items:new Map(),extras:new Map(),notes:new Map(),log:new Map(),checks:new Map()};
+const strip=o=>JSON.parse(JSON.stringify(o));
+const docData=(c,o)=>{if(c==='checks')return {v:strip(o.v)};const {id,...rest}=o;return strip(rest);};
+let saving=Promise.resolve();
+function save(){
+  const batch=writeBatch(db);let n=0;
+  for(const c in COLS){
+    const cur=new Map(COLS[c].get().map(o=>[o.id,JSON.stringify(docData(c,o))]));
+    for(const [id,js] of cur)if(synced[c].get(id)!==js){batch.set(doc(db,c,id),JSON.parse(js));synced[c].set(id,js);n++;}
+    if(c==='log')continue; /* loggen trimmes lokalt, men slettes ikke i databasen */
+    for(const id of [...synced[c].keys()])if(!cur.has(id)){batch.delete(doc(db,c,id));synced[c].delete(id);n++;}
+  }
+  if(n)saving=batch.commit().catch(e=>{console.error(e);toast('Kunne ikke gemme. Tjek forbindelsen.');});
+}
+function applySnap(c,snap){
+  let remote=[];
+  snap.docChanges().forEach(ch=>{
+    const id=ch.doc.id;
+    if(ch.type==='removed'){synced[c].delete(id);return;}
+    const d=ch.doc.data();synced[c].set(id,JSON.stringify(d));
+    if(c==='log'&&ch.type==='added'&&!snap.metadata.hasPendingWrites&&booted&&d.who!==state.me)remote.push(d);
+  });
+  if(c==='checks'){state.checks={};snap.docs.forEach(d=>state.checks[d.id]=d.data().v||{});}
+  else{
+    state[c]=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(c==='log'||c==='notes')state[c].sort((a,b)=>a.at-b.at);
+    else state[c].sort((a,b)=>a.id.localeCompare(b.id,undefined,{numeric:true}));
+  }
+  if(remote.length)toast(`${remote[remote.length-1].who}: ${remote[remote.length-1].text}`,3500);
+}
+let booted=false,unsubs=[];
+async function startSync(){
+  /* Første gang: læg startdata (fra Excel) i databasen */
+  const meta=await getDoc(doc(db,'meta','app'));
+  if(!meta.exists()){
+    const f=fresh(),batch=writeBatch(db);
+    f.items.forEach(x=>{const {id,...r}=x;batch.set(doc(db,'items',id),strip(r));});
+    f.extras.forEach(x=>{const {id,...r}=x;batch.set(doc(db,'extras',id),strip(r));});
+    batch.set(doc(db,'meta','app'),{seededAt:Date.now(),seededBy:state.me});
+    await batch.commit();
+  }
+  const ready=new Set();
+  const done=c=>{ready.add(c);if(ready.size===5&&!booted){booted=true;showApp();}else if(booted)renderKeep();};
+  for(const c of ['items','extras','notes','checks']){
+    unsubs.push(onSnapshot(collection(db,c),{includeMetadataChanges:false},s=>{applySnap(c,s);done(c);},err));
+  }
+  unsubs.push(onSnapshot(query(collection(db,'log'),orderBy('at','desc'),limit(300)),s=>{applySnap('log',s);done('log');},err));
+}
+function err(e){console.error(e);gate(`<i class="ti ti-alert-triangle" style="font-size:40px"></i><h2>Ingen adgang til data</h2><p>${esc(e.code||e.message)}</p><button class="gbtn" data-logout>Log ud</button>`);}
+function renderKeep(){if(document.getElementById('sheetBg').classList.contains('open'))return;const y=window.scrollY;render(true);window.scrollTo(0,y);}
+
+/* ---------- login ---------- */
+const gateEl=document.getElementById('gate');
+function gate(html){gateEl.innerHTML=`<div class="gate-in">${html}</div>`;gateEl.style.display='flex';document.body.classList.add('locked');
+  gateEl.querySelectorAll('[data-login]').forEach(b=>b.onclick=login);
+  gateEl.querySelectorAll('[data-logout]').forEach(b=>b.onclick=()=>signOut(auth));}
+function showApp(){gateEl.style.display='none';document.body.classList.remove('locked');render();}
+async function login(){
+  const p=new GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});
+  try{await signInWithPopup(auth,p);}
+  catch(e){
+    if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return signInWithRedirect(auth,p);
+    if(e.code!=='auth/popup-closed-by-user'&&e.code!=='auth/cancelled-popup-request')toast('Login fejlede: '+(e.code||e.message),3500);
+  }
+}
+function logout(){signOut(auth);}
+const loginScreen=()=>gate(`<div class="glogo"><i class="ti ti-wallet"></i></div><h1>Fællesbudget</h1><p>Emilie og Leons fælleskonto</p><button class="gbtn" data-login><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Log ind med Google</button>`);
+onAuthStateChanged(auth,async user=>{
+  unsubs.forEach(u=>u());unsubs=[];booted=false;
+  for(const c in synced)synced[c].clear();
+  if(!user){state={me:'',items:[],extras:[],log:[],checks:{},notes:[]};loginScreen();return;}
+  const who=USERS[(user.email||'').toLowerCase()];
+  if(!who){gate(`<i class="ti ti-lock" style="font-size:40px"></i><h2>Ingen adgang</h2><p>${esc(user.email)} har ikke adgang til dette budget.<br>Log ind med Emilies eller Leons Google-konto.</p><button class="gbtn" data-logout>Log ud og prøv en anden konto</button>`);return;}
+  state.me=who;
+  gate(`<div class="glogo"><i class="ti ti-wallet"></i></div><p>Henter budgettet…</p>`);
+  try{await startSync();}catch(e){err(e);}
+});
+
+/* ---------- backup ---------- */
+function exportData(){
+  const data={exportedAt:new Date().toISOString(),exportedBy:state.me,items:state.items,extras:state.extras,checks:state.checks,notes:state.notes,log:state.log};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`faellesbudget-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Backup er hentet');
+}
+window.app={get state(){return state;},render,save};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW',e));
+let sel=Math.max(START_IDX,Math.min(CUR_IDX,MAX_IDX));
+let yearView=CUR_Y;
+const selY=()=>fromIdx(sel).Y, selM=()=>fromIdx(sel).m;
+
+/* ---------- calculations ---------- */
+const kr=v=>new Intl.NumberFormat('da-DK',{maximumFractionDigits:0}).format(Math.round(v))+' kr.';
+const kr2=v=>new Intl.NumberFormat('da-DK',{minimumFractionDigits:Math.round(v*100)%100?2:0,maximumFractionDigits:2}).format(v)+' kr.';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const has=v=>v!=null&&v!=='';
+const items=g=>state.items.filter(x=>x.g===g);
+
+function fixedArr(x,Y){
+  const ys=Object.keys(x.years).map(Number).sort((a,b)=>a-b);
+  let best=ys[0];for(const y of ys)if(y<=Y)best=y;
+  return x.years[best];
+}
+function val(x,Y,m){
+  if(!active(Y,m))return x.v?null:0;
+  if(x.v)return x.years[Y]?.[m]??null;
+  return +fixedArr(x,Y)[m]||0;
+}
+const sumG=(g,Y,m)=>items(g).reduce((s,x)=>s+(+val(x,Y,m)||0),0);
+const extrasOf=(Y,m)=>state.extras.filter(e=>e.y===Y&&e.m===m);
+const exSum=(Y,m)=>active(Y,m)?extrasOf(Y,m).reduce((s,e)=>s+(+e.amount||0),0):0;
+const sharedSum=(Y,m)=>sumG('bolig',Y,m)+sumG('forbrug',Y,m)+exSum(Y,m);
+const pays=(p,Y,m)=>sumG(p,Y,m)+sharedSum(Y,m)/2;
+const total=(Y,m)=>pays('emilie',Y,m)+pays('leon',Y,m);
+const missing=(Y,m)=>realized(Y,m)?items('forbrug').filter(x=>val(x,Y,m)==null):[];
+const irregular=a=>new Set(a.map(Number)).size>1;
+const monthsOf=(Y,f)=>MONTHS.map((_,m)=>m).filter(m=>f(Y,m));
+const sumOver=(Y,ms,f)=>ms.reduce((s,m)=>s+f(Y,m),0);
+
+function freqText(x,Y){
+  if(x.v)return 'Indtastes når regningen kommer';
+  const a=fixedArr(x,Y);const nz=a.map((v,i)=>[+v,i]).filter(([v])=>v);
+  if(!nz.length)return 'Ingen beløb';
+  if(!irregular(a))return 'Hver måned';
+  return nz.map(([,i])=>M3[i]).join(', ');
+}
+function lastWorkday(Y,m){
+  const d=new Date(Y,m+1,0);
+  while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);
+  return ['søn.','man.','tirs.','ons.','tors.','fre.','lør.'][d.getDay()]+' '+d.getDate()+'. '+M3[m];
+}
+const mName=(Y,m)=>MONTHS[m].toLowerCase()+(Y!==CUR_Y?' '+Y:'');
+const idxName=i=>{const {Y,m}=fromIdx(i);return mName(Y,m);};
+function when(ts){const d=new Date(ts);return d.getDate()+'. '+M3[d.getMonth()]+' kl. '+String(d.getHours()).padStart(2,'0')+'.'+String(d.getMinutes()).padStart(2,'0');}
+function yearsAvail(){const s=new Set([START.y,CUR_Y]);state.extras.forEach(e=>s.add(e.y));state.items.forEach(x=>Object.keys(x.years).forEach(y=>s.add(+y)));return [...s].filter(y=>y>=START.y&&y<=CUR_Y+1).sort();}
+
+/* ---------- routing ---------- */
+function go(r){location.hash=r;}
+window.addEventListener('hashchange',render);
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+
+function render(keep){
+  if(!booted)return;
+  const r=(location.hash.slice(1)||'home').split('/');
+  const v=document.getElementById('view');
+  const tab={home:'home',p:'home',items:'items',check:'check',year:'year',log:'log'}[r[0]]||'home';
+  document.querySelectorAll('[data-go]').forEach(b=>b.classList.toggle('on',b.dataset.go===tab));
+  if(r[0]==='p')v.innerHTML=r[1]==='ekstra'?extraView():group(r[1]);
+  else if(r[0]==='check')v.innerHTML=checkView();
+  else if(r[0]==='items')v.innerHTML=allItems();
+  else if(r[0]==='year')v.innerHTML=yearPage();
+  else if(r[0]==='log')v.innerHTML=logView();
+  else v.innerHTML=home();
+  bind();
+  if(!keep)window.scrollTo(0,0);
+}
+
+function monthNav(){
+  const Y=selY(),m=selM();
+  return `<div class="monthnav"><button data-m="-1" aria-label="Forrige måned" ${sel<=START_IDX?'disabled':''}><i class="ti ti-chevron-left"></i></button>
+  <b style="min-width:92px;text-align:center">${MONTHS[m]}${Y!==CUR_Y?' '+Y:''}</b>
+  <button data-m="1" aria-label="Næste måned" ${sel>=MAX_IDX?'disabled':''}><i class="ti ti-chevron-right"></i></button></div>`;
+}
+
+/* ---------- home ---------- */
+function home(){
+  const Y=selY(),m=selM();
+  const t=total(Y,m),e=pays('emilie',Y,m),l=pays('leon',Y,m);
+  const max=Math.max(...MONTHS.map((_,i)=>total(Y,i)),1);
+  const extra=state.items.filter(x=>!x.v&&irregular(fixedArr(x,Y))&&val(x,Y,m)).map(x=>x.name);
+  const exN=extrasOf(Y,m).length;
+  const miss=missing(Y,m).map(x=>x.name);
+  const rm=monthsOf(Y,realized),ysum=sumOver(Y,rm,total);
+  const exYear=state.extras.filter(x=>x.y===Y).reduce((s,x)=>s+(+x.amount||0),0);
+  return `
+  <header class="hero"><button class="who" data-logout title="Log ud">${esc(state.me)} · Log ud <i class="ti ti-logout"></i></button>
+    <small>Hej ${esc(state.me)}</small><h1>Fælleskontoen</h1></header>
+  <div class="card overlap">
+    <div class="row" style="align-items:flex-start">
+      <div><p class="label">Indbetaling i ${mName(Y,m)}</p><p class="big">${kr(t)}</p></div>
+      ${extra.length?`<span class="pill">+ ${esc(extra.join(', '))}</span>`:''}
+    </div>
+    <p class="label" style="margin-top:6px"><i class="ti ti-calendar-event"></i> Overføres ${lastWorkday(Y,m)}${exN?` · inkl. ${exN} uforudset${exN>1?'e':''}`:''}</p>
+    ${(()=>{const st=payStatus(Y,m);if(!st.done)return '';const nN=state.notes.filter(n=>n.month===mKey(Y,m)).length;return `<p class="label" data-go2="check" style="margin-top:6px;cursor:pointer"><i class="ti ti-checklist"></i> Betalt ${kr(st.e+st.l)} af ${kr(st.tot)} · <span class="who-e">E ${kr(st.e)}</span> · <span class="who-l">L ${kr(st.l)}</span>${nN?` · ${nN} ${nN===1?'note':'noter'}`:''} <i class="ti ti-chevron-right"></i></p>`;})()}
+    ${miss.length?`<div class="await" data-open="forbrug"><i class="ti ti-hourglass-high"></i><div style="flex:1"><b>Afventer: ${esc(miss.join(', '))}</b><br>Beløbet kommer oveni, når regningen er tastet ind</div><i class="ti ti-chevron-right"></i></div>`:''}
+    <div class="bars">${MONTHS.map((_,i)=>{
+      if(!active(Y,i))return `<button class="off" style="height:4%" aria-label="${MONTHS[i]}: før budgettet startede" tabindex="-1"><span class="tip"><b>${M3[i]}.</b>Før start</span></button>`;
+      const ms=missing(Y,i).length,ex=exSum(Y,i);
+      return `<button data-sel="${idx(Y,i)}" class="${i===m?'sel':''}${ms?' miss':''}" style="height:${Math.max(4,total(Y,i)/max*100)}%" aria-label="${MONTHS[i]}: ${kr(total(Y,i))}"><span class="tip"><b>${M3[i]}.</b>${kr(total(Y,i))}${ex?`<br><small>heraf uforudset ${kr(ex)}</small>`:''}${ms?'<br><small>+ forbrug mangler</small>':''}</span></button>`;
+    }).join('')}</div>
+    <p class="label" style="margin-top:12px">${rm.length?`Snit ${kr(ysum/rm.length)}/md · ${kr(ysum)} overført i ${Y}`:`Ingen overførsler endnu i ${Y}`}</p>
+  </div>
+  <div class="card">
+    <div class="row"><p class="label">Fordeling</p>${monthNav()}</div>
+    <div class="split"><div style="width:${t?e/t*100:50}%;background:var(--emilie)"></div><div style="flex:1;background:var(--leon)"></div></div>
+    <div class="row" style="font-size:14px">
+      <span><span class="dot" style="background:var(--emilie)"></span>Emilie ${kr(e)}</span>
+      <span><span class="dot" style="background:var(--leon)"></span>Leon ${kr(l)}</span>
+    </div>
+  </div>
+  <div class="grid">
+    ${['emilie','leon'].map(p=>{const G=GROUPS[p];return `
+    <div class="card tile" data-open="${p}">
+      <div class="avatar" style="background:${G.soft};color:${G.color}">${G.initial}</div>
+      <h3>${G.name}</h3><p class="label">${items(p).length} poster</p>
+      <div class="amt">${kr(pays(p,Y,m))}</div>
+    </div>`}).join('')}
+    <div class="card tile wide" data-open="bolig">
+      <i class="ti ti-home"></i>
+      <div style="flex:1"><h3 style="margin:0">Bolig</h3><p class="label">${items('bolig').length} poster · deles i 2</p></div>
+      <div class="amt" style="margin:0">${kr(sumG('bolig',Y,m))}</div>
+    </div>
+    <div class="card tile wide" data-open="forbrug">
+      <i class="ti ti-bolt"></i>
+      <div style="flex:1"><h3 style="margin:0">Forbrug</h3><p class="label">${miss.length?`<span style="color:var(--warn)">Mangler ${miss.length} ${miss.length===1?'regning':'regninger'}</span>`:'Deles i 2'}</p></div>
+      <div class="amt" style="margin:0">${kr(sumG('forbrug',Y,m))}</div>
+    </div>
+  </div>
+  <p class="section-title">Uforudsete udgifter</p>
+  <div class="card extra-tile" data-open="ekstra">
+    <div class="ic-wrap"><i class="ti ti-tool"></i></div>
+    <div style="flex:1"><h3 style="margin:0;font-size:18px">Uforudsete</h3><p class="label">${exN?`${exN} i ${mName(Y,m)}`:`Ingen i ${mName(Y,m)}`} · ${kr(exYear)} i ${Y}</p></div>
+    <div class="amt" style="font-weight:600">${kr(exSum(Y,m))}</div>
+  </div>`;
+}
+
+/* ---------- groups ---------- */
+function itemRow(x){
+  const Y=selY(),m=selM();
+  if(x.v){
+    const v=val(x,Y,m),c=x.cover?.[Y]?.[m];
+    if(!active(Y,m))return `<div class="item dim"><i class="ti ${x.icon} ic"></i><div class="nm">${esc(x.name)}<div class="sub">Før budgettets start</div></div></div>`;
+    return `<div class="item" data-edit="${x.id}">
+    <i class="ti ${x.icon||'ti-receipt'} ic"></i>
+    <div class="nm">${esc(x.name)}<div class="sub">${has(v)?`Regning for ${idxName(c??idx(Y,m)-1)}`:(realized(Y,m)?'Afventer regning':'Regningen er ikke kommet endnu')}</div></div>
+    ${has(v)?`<div class="v">${kr2(+v)}</div>`:`<span class="pill">Indtast</span>`}
+  </div>`;
+  }
+  return `<div class="item" data-edit="${x.id}">
+    <i class="ti ${x.icon||'ti-receipt'} ic"></i>
+    <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}${x.by?` · rettet af ${esc(x.by)}`:''}</div></div>
+    <div class="v">${kr2(val(x,Y,m))}</div>
+  </div>`;
+}
+
+function group(g){
+  const G=GROUPS[g]; if(!G)return home();
+  const Y=selY(),m=selM();
+  const head=G.shared
+    ?`<i class="ti ${G.icon}" style="font-size:26px;color:var(--muted)"></i>`
+    :`<div class="avatar" style="background:${G.soft};color:${G.color}">${G.initial}</div>`;
+  let summary;
+  if(G.variable){
+    summary=`<p class="label">Forbrug der overføres i ${mName(Y,m)}</p><p class="big">${kr(sumG(g,Y,m))}</p>
+       <div class="chips"><span class="chip">Emilie ${kr(sumG(g,Y,m)/2)}</span><span class="chip">Leon ${kr(sumG(g,Y,m)/2)}</span></div>
+       <p class="label" style="margin-top:12px">Tast regningen ind inden overførslen ${lastWorkday(Y,m)}. Indtil da tæller den med 0 kr.</p>`;
+  }else if(G.shared){
+    summary=`<p class="label">Bolig i ${mName(Y,m)}</p><p class="big">${kr(sumG('bolig',Y,m))}</p>
+       <div class="chips"><span class="chip">Emilie ${kr(sumG('bolig',Y,m)/2)}</span><span class="chip">Leon ${kr(sumG('bolig',Y,m)/2)}</span></div>`;
+  }else{
+    const rm=monthsOf(Y,realized);
+    summary=`<p class="label">${G.name} indsætter i ${mName(Y,m)}</p><p class="big">${kr(pays(g,Y,m))}</p>
+       <div class="chips"><span class="chip">Egne ${kr(sumG(g,Y,m))}</span><span class="chip">½ bolig ${kr(sumG('bolig',Y,m)/2)}</span><span class="chip">½ forbrug ${kr(sumG('forbrug',Y,m)/2)}</span>${exSum(Y,m)?`<span class="chip">½ uforudset ${kr(exSum(Y,m)/2)}</span>`:''}</div>
+       <p class="label" style="margin-top:12px">${kr(sumOver(Y,rm,(y,i)=>pays(g,y,i)))} indsat i ${Y} indtil nu</p>`;
+  }
+  return `
+  <div class="back"><button data-back aria-label="Tilbage"><i class="ti ti-arrow-left"></i></button>${head}<h2>${G.name}</h2></div>
+  <div class="card">${summary}</div>
+  <div class="card list">
+    <div class="row" style="margin-bottom:6px"><p class="label">Poster</p>${monthNav()}</div>
+    ${items(g).map(itemRow).join('')||'<p class="empty">Ingen poster endnu</p>'}
+  </div>
+  ${G.variable?history(g):''}
+  <button class="add" data-new="${g}"><i class="ti ti-plus"></i>Tilføj ${G.variable?'forbrugspost':'post'}</button>`;
+}
+
+function history(g){
+  const rows=[];
+  state.items.filter(x=>x.g===g).forEach(x=>Object.entries(x.years).forEach(([Y,a])=>a.forEach((v,m)=>{if(has(v))rows.push({x,Y:+Y,m,v});})));
+  rows.sort((a,b)=>idx(b.Y,b.m)-idx(a.Y,a.m));
+  const avg=items(g).map(x=>{const v=rows.filter(r=>r.x===x).map(r=>+r.v);return v.length?`${esc(x.name)}: snit ${kr(v.reduce((s,n)=>s+n,0)/v.length)}`:null;}).filter(Boolean);
+  return `<div class="card list">
+    <p class="label" style="margin-bottom:6px">Betalte regninger</p>
+    ${rows.length?rows.map(({x,Y,m,v})=>`<div class="item" data-bill="${x.id}" data-by="${Y}" data-bm="${m}">
+      <i class="ti ${x.icon} ic"></i>
+      <div class="nm">${esc(x.name)}<div class="sub">${idxName(x.cover?.[Y]?.[m]??idx(Y,m)-1)}-regning · overført ${lastWorkday(Y,m)}${Y!==CUR_Y?' '+Y:''}</div></div>
+      <div class="v">${kr2(+v)}</div></div>`).join('')
+    :'<p class="empty">Når I taster regninger ind, kan I se dem her</p>'}
+    ${avg.length?`<p class="label" style="margin-top:10px">${avg.join(' · ')}</p>`:''}
+  </div>`;
+}
+
+/* ---------- uforudsete ---------- */
+function extraView(){
+  const Y=selY(),m=selM();
+  const list=state.extras.slice().sort((a,b)=>idx(b.y,b.m)-idx(a.y,a.m)||(b.at||0)-(a.at||0));
+  const yearSum=state.extras.filter(e=>e.y===Y).reduce((s,e)=>s+(+e.amount||0),0);
+  let lastKey=null;
+  return `
+  <div class="back"><button data-back aria-label="Tilbage"><i class="ti ti-arrow-left"></i></button>
+    <div class="avatar" style="background:var(--extra-soft);color:var(--extra);border-radius:14px"><i class="ti ti-tool"></i></div><h2>Uforudsete</h2></div>
+  <div class="card">
+    <div class="row"><p class="label">Overføres i ${mName(Y,m)}</p>${monthNav()}</div>
+    <p class="big">${kr(exSum(Y,m))}</p>
+    <div class="chips"><span class="chip">Emilie ${kr(exSum(Y,m)/2)}</span><span class="chip">Leon ${kr(exSum(Y,m)/2)}</span></div>
+    <p class="label" style="margin-top:12px">${kr(yearSum)} i alt i ${Y}. Alt herinde deles i 2 og lægges oveni månedens overførsel.</p>
+  </div>
+  <div class="card list">
+    ${list.length?list.map(e=>{const k=idx(e.y,e.m);const h=k!==lastKey?`<p class="label" style="padding:${lastKey===null?'0':'14px'} 0 4px">${MONTHS[e.m]} ${e.y}</p>`:'';lastKey=k;return h+`
+      <div class="item" data-extra="${e.id}">
+        <i class="ti ${e.icon||'ti-receipt'} ic" style="color:var(--extra)"></i>
+        <div class="nm">${esc(e.name)}<div class="sub">${e.note?esc(e.note)+' · ':''}${kr2(e.amount/2)} hver${e.by?` · ${esc(e.by)}`:''}</div></div>
+        <div class="v">${kr2(+e.amount)}</div>
+      </div>`;}).join('')
+    :'<p class="empty">Ingen uforudsete udgifter endnu</p>'}
+  </div>
+  <button class="add" data-newextra style="color:var(--extra)"><i class="ti ti-plus"></i>Tilføj uforudset udgift</button>`;
+}
+
+function openExtra(e){
+  const isNew=!e;const Y=e?e.y:selY(),m=e?e.m:selM();
+  const ys=yearsAvail();
+  sh.innerHTML=`
+    <h3>${isNew?'Ny uforudset udgift':'Ret uforudset udgift'}</h3>
+    <div class="field"><label for="xName">Hvad var det?</label><input id="xName" value="${esc(e?e.name:'')}" placeholder="Fx Syn af brændeovn"></div>
+    <div class="field"><label for="xAmt">Beløb i alt</label><input id="xAmt" type="number" inputmode="decimal" step="0.01" value="${e?+e.amount:''}" placeholder="Fx 2.473,75"></div>
+    <div class="field"><label>Lægges på overførslen i</label><div class="two">
+      <select id="xM">${MONTHS.map((n,i)=>`<option value="${i}" ${i===m?'selected':''}>${n}</option>`).join('')}</select>
+      <select id="xY">${ys.map(y=>`<option ${y===Y?'selected':''}>${y}</option>`).join('')}</select></div></div>
+    <div class="field"><label for="xNote">Note (valgfri)</label><input id="xNote" value="${esc(e?.note||'')}" placeholder="Fx Betalt til skorstensfejeren"></div>
+    <p class="label" id="xHalf">Deles i 2</p>
+    <p class="label err" id="xErr"></p>
+    <div class="btns">
+      ${isNew?'':'<button class="btn del" id="xDel" aria-label="Slet"><i class="ti ti-trash"></i></button>'}
+      <button class="btn sec" id="xCancel">Annuller</button>
+      <button class="btn pri" id="xSave">Gem</button>
+    </div>`;
+  bg.classList.add('open');
+  const q=id=>document.getElementById(id);
+  const upd=()=>{const v=parseFloat(q('xAmt').value);q('xHalf').textContent=v>0?`Deles i 2: ${kr2(v/2)} hver`:'Deles i 2';q('xErr').style.display='none';};
+  q('xAmt').oninput=upd;upd();
+  q('xCancel').onclick=closeSheet;
+  if(q('xDel'))q('xDel').onclick=()=>armed(q('xDel'),()=>{state.extras=state.extras.filter(i=>i.id!==e.id);addLog(`Slettede uforudset udgift: ${e.name} (${kr2(e.amount)})`);save();closeSheet();render();toast('Slettet');});
+  q('xSave').onclick=()=>{
+    const name=q('xName').value.trim(),amt=parseFloat(q('xAmt').value.replace(',','.'));
+    const nm=+q('xM').value,ny=+q('xY').value;
+    const err=t=>{q('xErr').textContent=t;q('xErr').style.display='block';};
+    if(!name)return err('Skriv hvad udgiften var');
+    if(!(amt>0))return err('Indtast et beløb');
+    if(!active(ny,nm))return err('Måneden ligger før budgettet startede i september 2026');
+    const now=Date.now();
+    if(isNew){state.extras.push({id:'x'+now,name,icon:'ti-tool',amount:amt,y:ny,m:nm,note:q('xNote').value.trim(),by:state.me,at:now});addLog(`Tilføjede uforudset udgift: ${name} · ${kr2(amt)} (${mName(ny,nm)})`);}
+    else{Object.assign(e,{name,amount:amt,y:ny,m:nm,note:q('xNote').value.trim(),by:state.me,at:now});addLog(`Rettede uforudset udgift: ${name} · ${kr2(amt)}`);}
+    save();closeSheet();render();toast('Gemt');
+  };
+}
+
+/* ---------- poster ---------- */
+function allItems(){
+  const Y=selY(),m=selM(),ms=monthsOf(Y,active);
+  const yearItem=x=>ms.reduce((s,i)=>s+(+val(x,Y,i)||0),0);
+  const yearG=g=>items(g).reduce((s,x)=>s+yearItem(x),0);
+  const exYear=state.extras.filter(e=>e.y===Y).reduce((s,e)=>s+(+e.amount||0),0);
+  const exMonth=extrasOf(Y,m);
+  const row=x=>{
+    const v=val(x,Y,m);
+    const amt=x.v?(has(v)?kr2(+v):(realized(Y,m)?'<span class="pill">Afventer</span>':'<span class="label">–</span>')):kr2(v);
+    return `<div class="item${!x.v&&!v?' dim':''}" data-edit="${x.id}">
+      <i class="ti ${x.icon||'ti-receipt'} ic"></i>
+      <div class="nm">${esc(x.name)}<div class="sub">${freqText(x,Y)}</div></div>
+      <div class="v">${amt}</div></div>`;
+  };
+  return `<div class="back"><h2>Alle poster</h2></div>
+  <div class="card" style="position:sticky;top:8px;z-index:3">
+    <div class="row"><div><p class="label">I alt i ${mName(Y,m)}</p><p class="big" style="font-size:24px">${kr(total(Y,m))}</p></div>${monthNav()}</div>
+  </div>`+
+  Object.keys(GROUPS).map(g=>`
+  <div class="card list">
+    <div class="row" style="margin-bottom:6px"><p class="label">${GROUPS[g].name}</p><span class="label"><b style="color:var(--ink)">${kr(sumG(g,Y,m))}</b></span></div>
+    ${items(g).map(row).join('')}
+  </div>`).join('')+`
+  <div class="card list">
+    <div class="row" style="margin-bottom:6px"><p class="label">Uforudsete</p><span class="label"><b style="color:var(--ink)">${kr(exSum(Y,m))}</b></span></div>
+    ${exMonth.map(e=>`<div class="item" data-extra="${e.id}"><i class="ti ${e.icon||'ti-tool'} ic"></i><div class="nm">${esc(e.name)}<div class="sub">Deles i 2</div></div><div class="v">${kr2(+e.amount)}</div></div>`).join('')||`<p class="empty" style="padding:8px 0">Ingen i ${mName(Y,m)}</p>`}
+  </div>
+  <p class="section-title">I alt for ${Y}</p>
+  <div class="card list">
+    <p class="label" style="margin-bottom:6px">${MONTHS[ms[0]??0]} – december ${Y}${Y===START.y?' (siden I flyttede ind)':''}</p>
+    ${Object.keys(GROUPS).map(g=>`<div class="item" style="cursor:default"><i class="ti ${GROUPS[g].icon||'ti-user'} ic"></i><div class="nm">${GROUPS[g].name}<div class="sub">${g==='forbrug'?'Indtastede regninger':(GROUPS[g].shared?'Deles i 2':'Egne poster')}</div></div><div class="v">${kr(yearG(g))}</div></div>`).join('')}
+    <div class="item" style="cursor:default"><i class="ti ti-tool ic"></i><div class="nm">Uforudsete<div class="sub">Deles i 2</div></div><div class="v">${kr(exYear)}</div></div>
+    <div class="item" style="cursor:default"><i class="ti ti-sum ic"></i><div class="nm"><b>I alt</b><div class="sub">Emilie ${kr(sumOver(Y,ms,(y,i)=>pays('emilie',y,i)))} · Leon ${kr(sumOver(Y,ms,(y,i)=>pays('leon',y,i)))}</div></div><div class="v">${kr(sumOver(Y,ms,total))}</div></div>
+  </div>`;
+}
+
+/* ---------- year / wrap ---------- */
+function catSums(Y,ms){
+  return {
+    egne:sumOver(Y,ms,(y,m)=>sumG('emilie',y,m)+sumG('leon',y,m)),
+    bolig:sumOver(Y,ms,(y,m)=>sumG('bolig',y,m)),
+    forbrug:sumOver(Y,ms,(y,m)=>sumG('forbrug',y,m)),
+    ekstra:sumOver(Y,ms,exSum)
+  };
+}
+const CATS=[['egne','Emilie og Leons egne','var(--accent)'],['bolig','Bolig','var(--bolig)'],['forbrug','Forbrug','var(--forbrug)'],['ekstra','Uforudsete','var(--extra)']];
+const span=ms=>ms.length?(ms.length===1?M3[ms[0]]:`${M3[ms[0]]}–${M3[ms[ms.length-1]]}`):'';
+
+function yearPage(){
+  const Y=yearView,ms=monthsOf(Y,realized);
+  const tot=sumOver(Y,ms,total);
+  const top=ms.length?ms.reduce((a,b)=>total(Y,b)>total(Y,a)?b:a):null;
+  const c=catSums(Y,ms),ctot=Object.values(c).reduce((s,v)=>s+v,0)||1;
+  const P=Y-1,overlap=MONTHS.map((_,m)=>m).filter(m=>realized(Y,m)&&active(P,m));
+  let cmp;
+  if(overlap.length){
+    const a=catSums(P,overlap),b=catSums(Y,overlap);
+    const ta=sumOver(P,overlap,total),tb=sumOver(Y,overlap,total);
+    const rowC=(lbl,x,y)=>{const d=x?((y-x)/x*100):null;return `<div class="item"><div class="nm">${lbl}<div class="sub">${P}: ${kr(x)} · ${Y}: ${kr(y)}</div></div><div class="v ${y>x?'up':'down'}">${d==null?'ny':(d>0?'+':'')+Math.round(d)+' %'}</div></div>`;};
+    cmp=`<div class="card list cmp"><p class="label" style="margin-bottom:6px">${Y} mod ${P} · samme måneder (${span(overlap)})</p>
+      ${rowC('<b>I alt overført</b>',ta,tb)}${CATS.map(([k,l])=>rowC(l,a[k],b[k])).join('')}</div>`;
+  }else{
+    const first=Math.max(START_IDX+12,idx(Y,0));const f=fromIdx(first);
+    cmp=`<div class="card"><p class="label" style="margin-bottom:6px">Sammenligning med året før</p>
+      <p style="margin:0;font-size:14px;line-height:1.5">Budgettet startede i september ${START.y}, så der er ikke noget at sammenligne ${Y} med endnu. Fra ${MONTHS[f.m].toLowerCase()} ${f.Y} kan I se, om I bruger mere eller mindre end samme måned året før.</p></div>`;
+  }
+  return `<div class="back"><h2>Årsoverblik</h2></div>
+  <div class="years">${yearsAvail().map(y=>`<button data-year="${y}" class="${y===Y?'on':''}">${y}</button>`).join('')}</div>
+  <div class="card wrap">
+    <p class="label">Jeres ${Y}${ms.length?` · ${span(ms)}`:''}</p>
+    <p class="big">${kr(tot)}</p>
+    <p class="label">overført til fælleskontoen${Y===START.y?' siden I flyttede ind':''}</p>
+    <div class="stats">
+      <div><b>${ms.length?kr(tot/ms.length):'–'}</b><span>snit pr. måned</span></div>
+      <div><b>${top!=null?MONTHS[top]:'–'}</b><span>dyreste måned${top!=null?' · '+kr(total(Y,top)):''}</span></div>
+      <div><b>${kr(c.forbrug)}</b><span>el, vand og skrald</span></div>
+      <div><b>${kr(c.ekstra)}</b><span>uforudsete udgifter</span></div>
+      <div><b>${kr(sumOver(Y,ms,(y,m)=>pays('emilie',y,m)))}</b><span>indsat af Emilie</span></div>
+      <div><b>${kr(sumOver(Y,ms,(y,m)=>pays('leon',y,m)))}</b><span>indsat af Leon</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <p class="label">Hvor gik pengene hen?</p>
+    <div class="split">${CATS.map(([k,,col])=>`<div style="width:${c[k]/ctot*100}%;background:${col}"></div>`).join('')}</div>
+    ${CATS.map(([k,l,col])=>`<div class="row" style="font-size:14px;padding:3px 0"><span><span class="dot" style="background:${col}"></span>${l}</span><span>${kr(c[k])} · ${Math.round(c[k]/ctot*100)} %</span></div>`).join('')}
+  </div>
+  ${cmp}
+  <div class="card list">
+    <p class="label" style="margin-bottom:6px">Måned for måned</p>
+    ${MONTHS.map((n,m)=>active(Y,m)?`<div class="item" data-pick="${idx(Y,m)}">
+      <i class="ti ti-calendar ic"></i>
+      <div class="nm">${n}<div class="sub">Emilie ${kr(pays('emilie',Y,m))} · Leon ${kr(pays('leon',Y,m))}${missing(Y,m).length?'<br><span style="color:var(--warn)">Forbrug mangler</span>':''}${!realized(Y,m)?'<br>Forventet':''}</div></div>
+      <div class="v">${kr(total(Y,m))}</div></div>`
+      :`<div class="item dim"><i class="ti ti-calendar-off ic"></i><div class="nm">${n}<div class="sub">Før budgettets start</div></div></div>`).join('')}
+  </div>`;
+}
+
+/* ---------- tjekliste ---------- */
+const mKey=(Y,m)=>`${Y}-${m+1}`;
+const pCls=who=>who==='Leon'?'l':'e';
+const shortDate=ts=>{const d=new Date(ts);return d.getDate()+'. '+M3[d.getMonth()];};
+function rowsFor(Y,m){
+  const secs=[];
+  for(const g of ['emilie','leon','bolig']){
+    const rows=items(g).map(x=>({key:x.id,name:x.name,icon:x.icon,amt:val(x,Y,m)})).filter(r=>r.amt>0);
+    if(rows.length)secs.push({title:GROUPS[g].name,g,rows});
+  }
+  const fr=items('forbrug').map(x=>{const v=val(x,Y,m);return {key:x.id,name:x.name,icon:x.icon,amt:has(v)?+v:null,pending:!has(v)};}).filter(r=>r.pending||r.amt>0);
+  if(fr.length)secs.push({title:'Forbrug',g:'forbrug',rows:fr});
+  const ex=extrasOf(Y,m).map(e=>({key:'x:'+e.id,name:e.name,icon:e.icon||'ti-tool',amt:+e.amount}));
+  if(ex.length)secs.push({title:'Uforudsete',g:'ekstra',rows:ex});
+  return secs;
+}
+function payStatus(Y,m){
+  const ch=state.checks[mKey(Y,m)]||{};
+  let tot=0,e=0,l=0,n=0,done=0;
+  rowsFor(Y,m).forEach(s=>s.rows.forEach(r=>{if(r.pending)return;n++;tot+=r.amt;const c=ch[r.key];if(c){done++;c.by==='Leon'?l+=r.amt:e+=r.amt;}}));
+  return {tot,e,l,n,done};
+}
+const notesFor=(Y,m,row)=>state.notes.filter(n=>n.month===mKey(Y,m)&&(n.row??null)===row);
+const noteHtml=n=>`<div class="note ${pCls(n.by)}"><div><b>${esc(n.by)}</b> ${esc(n.text)}<div class="sub">${shortDate(n.at)}</div></div><button class="x" data-delnote="${n.id}" aria-label="Slet note"><i class="ti ti-x"></i></button></div>`;
+
+function checkView(){
+  const Y=selY(),m=selM();
+  if(!active(Y,m))return `<div class="back"><h2>Tjekliste</h2></div><div class="card"><p class="empty">Måneden ligger før budgettets start</p></div>`;
+  const k=mKey(Y,m),ch=state.checks[k]||{},st=payStatus(Y,m);
+  const pct=v=>st.tot?v/st.tot*100:0;
+  return `<div class="back"><h2>Tjekliste</h2></div>
+  <div class="card">
+    <div class="row"><p class="label">Betalt i ${mName(Y,m)}</p>${monthNav()}</div>
+    <p class="big" style="font-size:24px">${kr(st.e+st.l)} <span class="label" style="font-size:15px;font-weight:400">af ${kr(st.tot)}</span></p>
+    <div class="progress"><div style="width:${pct(st.e)}%;background:var(--emilie)"></div><div style="width:${pct(st.l)}%;background:var(--leon)"></div></div>
+    <div class="row" style="font-size:13px;flex-wrap:wrap">
+      <span><span class="dot" style="background:var(--emilie)"></span>Emilie ${kr(st.e)}</span>
+      <span><span class="dot" style="background:var(--leon)"></span>Leon ${kr(st.l)}</span>
+      <span class="label">${st.done} af ${st.n} poster</span>
+    </div>
+  </div>
+  ${rowsFor(Y,m).map(s=>`<div class="card list">
+    <p class="label" style="margin-bottom:4px">${s.title}</p>
+    ${s.rows.map(r=>{
+      const c=ch[r.key],ns=notesFor(Y,m,r.key);
+      if(r.pending)return `<div class="item" data-pendbill="${r.key}"><button class="chk" style="border-style:dashed" aria-label="Indtast regning for ${esc(r.name)}"><i class="ti ti-plus" style="color:var(--muted);font-size:15px"></i></button><div class="nm"><span>${esc(r.name)}</span><div class="sub">Afventer regning · tryk for at indtaste</div></div><span class="pill">Indtast</span></div>`;
+      return `<div class="item ${c?'done':''}" data-row="${r.key}" data-rowname="${esc(r.name)}">
+        <button class="chk ${c?pCls(c.by):''}" data-chk="${r.key}" aria-label="${c?'Fjern flueben':'Marker som betalt'}: ${esc(r.name)}">${c?(c.by==='Leon'?'L':'E'):''}</button>
+        <div class="nm"><span>${esc(r.name)}</span>${ns.length?'<i class="ti ti-message noteicon"></i>':''}
+          <div class="sub">${c?`<span class="who-${pCls(c.by)}">Betalt af ${esc(c.by)}</span> · ${shortDate(c.at)}`:'Tryk for at tilføje en note'}</div>
+          ${ns.map(noteHtml).join('')}
+        </div>
+        <div class="v">${kr2(r.amt)}</div>
+      </div>`;}).join('')}
+  </div>`).join('')}
+  <div class="card">
+    <p class="label" style="margin-bottom:8px">Noter til ${mName(Y,m)}</p>
+    ${notesFor(Y,m,null).map(noteHtml).join('')||''}
+    <div class="inline" style="margin-top:10px"><input id="mNote" placeholder="Fx Jeg betaler bilforsikringen d. 15."><button data-addnote>Tilføj</button></div>
+  </div>`;
+}
+
+function toggleCheck(key){
+  const Y=selY(),m=selM(),k=mKey(Y,m);
+  state.checks[k]??={};
+  const name=rowsFor(Y,m).flatMap(s=>s.rows).find(r=>r.key===key)?.name||'';
+  if(state.checks[k][key]){delete state.checks[k][key];addLog(`Fjernede flueben ved ${name} (${mName(Y,m)})`);}
+  else{state.checks[k][key]={by:state.me,at:Date.now()};addLog(`Markerede ${name} som betalt (${mName(Y,m)})`);}
+  save();const y=window.scrollY;render();window.scrollTo(0,y);
+}
+function addNote(text,row){
+  text=text.trim();if(!text)return false;
+  const Y=selY(),m=selM();
+  state.notes.push({id:'n'+Date.now(),month:mKey(Y,m),row:row??null,text,by:state.me,at:Date.now()});
+  addLog(`Skrev en note${row?'':' til '+mName(Y,m)}: "${text.length>40?text.slice(0,40)+'…':text}"`);
+  save();return true;
+}
+function openRowNote(key,name){
+  const Y=selY(),m=selM(),c=(state.checks[mKey(Y,m)]||{})[key];
+  sh.innerHTML=`<h3>${esc(name)}</h3>
+    <p class="label" style="margin:-8px 0 14px">${MONTHS[m]} ${Y}${c?` · betalt af ${esc(c.by)} ${shortDate(c.at)}`:' · ikke betalt endnu'}</p>
+    ${notesFor(Y,m,key).map(noteHtml).join('')}
+    <div class="field" style="margin-top:12px"><label for="rNote">Ny note</label><textarea id="rNote" placeholder="Fx Betales først d. 15., når lønnen er gået ind"></textarea></div>
+    <div class="btns"><button class="btn sec" id="rCancel">Luk</button><button class="btn pri" id="rSave">Gem note</button></div>`;
+  bg.classList.add('open');
+  document.getElementById('rCancel').onclick=closeSheet;
+  document.getElementById('rSave').onclick=()=>{if(addNote(document.getElementById('rNote').value,key)){closeSheet();render();toast('Noten er gemt');}};
+  sh.querySelectorAll('[data-delnote]').forEach(b=>b.onclick=()=>armed(b,()=>{delNote(b.dataset.delnote);openRowNote(key,name);}));
+  setTimeout(()=>document.getElementById('rNote').focus(),50);
+}
+function delNote(id){
+  const n=state.notes.find(x=>x.id===id);if(!n)return;
+  state.notes=state.notes.filter(x=>x.id!==id);addLog(`Slettede en note`);save();
+  const y=window.scrollY;render();window.scrollTo(0,y);toast('Noten er slettet');
+}
+/* To-trins sletning i stedet for browserens confirm(), som ikke altid vises */
+function armed(btn,fn,label='Slet?'){
+  if(btn.dataset.armed){fn();return;}
+  btn.dataset.armed='1';const old=btn.innerHTML;
+  btn.innerHTML=label;btn.classList.add('armed');
+  setTimeout(()=>{if(btn.isConnected&&btn.dataset.armed){delete btn.dataset.armed;btn.innerHTML=old;btn.classList.remove('armed');}},3000);
+}
+
+function logView(){
+  return `<div class="back"><h2>Ændringer</h2></div>
+  <div class="card list log">
+    ${state.log.length?state.log.slice().reverse().map(l=>`<div class="item">
+      <div class="avatar" style="width:32px;height:32px;font-size:13px;background:${l.who==='Leon'?'var(--leon-soft)':'var(--emilie-soft)'};color:${l.who==='Leon'?'var(--leon)':'var(--emilie)'}">${esc(l.who[0])}</div>
+      <div class="nm">${esc(l.text)}<div class="sub">${esc(l.who)} · ${when(l.at)}</div></div></div>`).join('')
+    :'<p class="empty">Ingen ændringer endnu. Når en af jer retter en post, står det her.</p>'}
+  </div>
+  <button class="add" data-export style="color:var(--muted)"><i class="ti ti-download"></i>Hent backup af alle data</button>`;
+}
+
+/* ---------- interactions ---------- */
+function bind(){
+  const $$=s=>document.querySelectorAll('#view '+s);
+  $$('[data-sel]').forEach(b=>b.onclick=()=>{sel=+b.dataset.sel;render();});
+  $$('[data-m]').forEach(b=>b.onclick=()=>{sel=Math.min(MAX_IDX,Math.max(START_IDX,sel+ +b.dataset.m));render();});
+  $$('[data-open]').forEach(b=>b.onclick=()=>go('p/'+b.dataset.open));
+  $$('[data-back]').forEach(b=>b.onclick=()=>history.length>1?history.back():go('home'));
+  $$('[data-edit]').forEach(b=>b.onclick=()=>{const x=state.items.find(i=>i.id===b.dataset.edit);x.v?openBill(x,selY(),selM()):openSheet(x);});
+  $$('[data-bill]').forEach(b=>b.onclick=()=>openBill(state.items.find(i=>i.id===b.dataset.bill),+b.dataset.by,+b.dataset.bm));
+  $$('[data-new]').forEach(b=>b.onclick=()=>openSheet(null,b.dataset.new));
+  $$('[data-extra]').forEach(b=>b.onclick=()=>openExtra(state.extras.find(e=>e.id===b.dataset.extra)));
+  $$('[data-newextra]').forEach(b=>b.onclick=()=>openExtra(null));
+  $$('[data-pick]').forEach(b=>b.onclick=()=>{sel=+b.dataset.pick;go('home');});
+  $$('[data-pendbill]').forEach(b=>b.onclick=()=>openBill(state.items.find(i=>i.id===b.dataset.pendbill),selY(),selM(),true));
+  $$('[data-chk]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();toggleCheck(b.dataset.chk);});
+  $$('[data-row]').forEach(b=>b.onclick=ev=>{if(ev.target.closest('[data-delnote]'))return;openRowNote(b.dataset.row,b.dataset.rowname);});
+  $$('[data-delnote]').forEach(b=>b.onclick=ev=>{ev.stopPropagation();armed(b,()=>delNote(b.dataset.delnote));});
+  $$('[data-addnote]').forEach(b=>b.onclick=()=>{if(addNote(document.getElementById('mNote').value,null)){render();toast('Noten er gemt');}});
+  $$('#mNote').forEach(i=>i.onkeydown=e=>{if(e.key==='Enter'&&addNote(i.value,null)){render();toast('Noten er gemt');}});
+  $$('[data-go2]').forEach(b=>b.onclick=()=>go(b.dataset.go2));
+  $$('[data-year]').forEach(b=>b.onclick=()=>{yearView=+b.dataset.year;render();});
+  $$('[data-logout]').forEach(b=>b.onclick=()=>armed(b,logout,'Log ud?'));
+  $$('[data-export]').forEach(b=>b.onclick=exportData);
+}
+
+const bg=document.getElementById('sheetBg'),sh=document.getElementById('sheet');
+bg.onclick=e=>{if(e.target===bg)closeSheet();};
+function closeSheet(){bg.classList.remove('open');}
+
+function openBill(x,Y,m,fromCheck){
+  if(!active(Y,m)){toast('Måneden ligger før budgettets start');return;}
+  const v=val(x,Y,m),pay=idx(Y,m),c=x.cover?.[Y]?.[m]??pay-1;
+  const opts=[];for(let i=pay;i>=Math.max(pay-12,START_IDX-1);i--)opts.push(i);
+  sh.innerHTML=`
+    <h3>${esc(x.name)}</h3>
+    <p class="label" style="margin:-8px 0 16px">Overføres ${lastWorkday(Y,m)}${Y!==CUR_Y?' '+Y:''}</p>
+    <div class="field"><label for="bAmt">Regningens beløb</label><input id="bAmt" type="number" inputmode="decimal" step="0.01" value="${has(v)?+v:''}" placeholder="Fx 1.081,90"></div>
+    <div class="field"><label for="bCov">Regningen dækker</label><select id="bCov">${opts.map(i=>{const f=fromIdx(i);return `<option value="${i}" ${i===c?'selected':''}>${MONTHS[f.m]} ${f.Y}</option>`;}).join('')}</select></div>
+    ${fromCheck?`<label style="display:flex;align-items:center;gap:10px;font-size:15px;margin:4px 0 8px;cursor:pointer"><input type="checkbox" id="bPaid" checked style="width:22px;height:22px;accent-color:${state.me==='Leon'?'var(--leon)':'var(--emilie)'}"> Marker som betalt af ${esc(state.me)}</label>`:''}
+    <p class="label err" id="bErr">Indtast et beløb</p>
+    <div class="btns">
+      ${has(v)?'<button class="btn del" id="bDel" aria-label="Fjern beløb"><i class="ti ti-trash"></i></button>':''}
+      <button class="btn sec" id="bCancel">Annuller</button>
+      <button class="btn pri" id="bSave">Gem</button>
+    </div>`;
+  bg.classList.add('open');
+  const q=id=>document.getElementById(id);
+  const ensure=()=>{x.years[Y]??=all(null);x.cover??={};x.cover[Y]??=all(null);};
+  q('bCancel').onclick=closeSheet;
+  q('bAmt').oninput=()=>q('bErr').style.display='none';
+  setTimeout(()=>q('bAmt').focus(),250);
+  if(q('bDel'))q('bDel').onclick=()=>{ensure();x.years[Y][m]=null;x.cover[Y][m]=null;addLog(`Fjernede ${x.name} for ${mName(Y,m)}`);save();closeSheet();render();toast('Beløbet er fjernet');};
+  q('bSave').onclick=()=>{
+    const raw=q('bAmt').value.replace(',','.');
+    if(raw===''||isNaN(parseFloat(raw))){q('bErr').style.display='block';return;}
+    ensure();
+    const amt=Math.max(0,parseFloat(raw)),cov=+q('bCov').value;
+    x.years[Y][m]=amt;x.cover[Y][m]=cov;x.by=state.me;x.at=Date.now();
+    addLog(`${x.name}: ${idxName(cov)}-regning på ${kr2(amt)} overføres i ${mName(Y,m)}`);
+    const paid=q('bPaid')?.checked;
+    if(paid){const k=mKey(Y,m);state.checks[k]??={};state.checks[k][x.id]={by:state.me,at:Date.now()};addLog(`Markerede ${x.name} som betalt (${mName(Y,m)})`);}
+    save();closeSheet();const sy=window.scrollY;render();if(fromCheck)window.scrollTo(0,sy);toast(paid?'Gemt og markeret som betalt':'Regningen er gemt');
+  };
+}
+
+function openSheet(x,g){
+  const isNew=!x;const Y=selY();
+  if(isNew&&GROUPS[g].variable){
+    sh.innerHTML=`<h3>Ny forbrugspost</h3>
+      <div class="field"><label for="vName">Navn</label><input id="vName" placeholder="Fx Varme"></div>
+      <p class="label">Posten har intet fast beløb. I taster regningen ind hver gang, den kommer.</p>
+      <p class="label err" id="vErr">Giv posten et navn</p>
+      <div class="btns"><button class="btn sec" id="vCancel">Annuller</button><button class="btn pri" id="vSave">Opret</button></div>`;
+    bg.classList.add('open');
+    document.getElementById('vCancel').onclick=closeSheet;
+    document.getElementById('vSave').onclick=()=>{
+      const name=document.getElementById('vName').value.trim();
+      if(!name){document.getElementById('vErr').style.display='block';return;}
+      state.items.push({g,name,icon:'ti-receipt',v:true,years:{},cover:{},id:'n'+Date.now(),by:state.me,at:Date.now()});
+      addLog(`Oprettede forbrugsposten ${name}`);save();closeSheet();render();toast('Oprettet');
+    };
+    return;
+  }
+  const a=x?fixedArr(x,Y):all(0);
+  sh.innerHTML=`
+    <h3>${isNew?'Ny post · '+GROUPS[g].name:'Ret post'}</h3>
+    <div class="field"><label for="fName">Navn</label><input id="fName" value="${esc(x?x.name:'')}" placeholder="Fx Tandlægeforsikring"></div>
+    <div class="field"><label for="fAll">Samme beløb hver måned</label>
+      <div class="inline"><input id="fAll" type="number" inputmode="decimal" placeholder="${irregular(a)?'Forskellige beløb':(+a[0]||0)}"><button id="fApply">Brug</button></div></div>
+    <div class="field"><label>Beløb pr. måned i ${Y}</label>
+      <div class="mgrid">${MONTHS.map((n,m)=>`<div><span>${n}</span><input type="number" inputmode="decimal" step="0.01" data-mi="${m}" value="${+a[m]||''}" placeholder="0" ${active(Y,m)?'':'disabled title="Før budgettets start"'}></div>`).join('')}</div></div>
+    <p class="label">Ændringer gælder for ${Y} og fortsætter i de næste år, indtil I retter dem igen.</p>
+    ${x&&x.by?`<p class="label" style="margin-top:6px">Sidst rettet af ${esc(x.by)} · ${when(x.at)}</p>`:''}
+    <p class="label err" id="fErr"></p>
+    <div class="btns">
+      ${isNew?'':'<button class="btn del" id="fDel" aria-label="Slet"><i class="ti ti-trash"></i></button>'}
+      <button class="btn sec" id="fCancel">Annuller</button>
+      <button class="btn pri" id="fSave">Gem</button>
+    </div>`;
+  bg.classList.add('open');
+  const q=id=>document.getElementById(id);
+  q('fApply').onclick=()=>{const v=q('fAll').value;if(v==='')return;sh.querySelectorAll('[data-mi]').forEach(i=>i.value=v);};
+  q('fCancel').onclick=closeSheet;
+  if(q('fDel'))q('fDel').onclick=()=>{
+    armed(q('fDel'),()=>{
+    state.items=state.items.filter(i=>i.id!==x.id);
+    addLog(`Slettede ${x.name} (${GROUPS[x.g].name})`);save();closeSheet();render();toast('Posten er slettet');
+  });};
+  q('fSave').onclick=()=>{
+    const name=q('fName').value.trim();
+    if(!name){q('fErr').textContent='Giv posten et navn';q('fErr').style.display='block';return;}
+    const na=[...sh.querySelectorAll('[data-mi]')].map(i=>Math.max(0,parseFloat(i.value.replace(',','.'))||0));
+    const now=Date.now();
+    if(isNew){
+      state.items.push({g,name,icon:'ti-receipt',years:{[Y]:na},id:'n'+now,by:state.me,at:now});
+      addLog(`Tilføjede ${name} (${GROUPS[g].name})`);
+    }else{
+      const changes=[];
+      if(name!==x.name)changes.push(`omdøbte "${x.name}" til "${name}"`);
+      if(na.some((v,i)=>v!==(+a[i]||0))){
+        changes.push(!irregular(na)&&!irregular(a)?`${name}: ${kr2(+a[0]||0)} → ${kr2(na[0])} pr. md`:`${name}: nye månedsbeløb for ${Y}`);
+      }
+      if(!changes.length){closeSheet();return;}
+      x.name=name;x.years[Y]=na;x.by=state.me;x.at=now;
+      addLog(changes.join(', ').replace(/^./,c=>c.toUpperCase()));
+    }
+    save();closeSheet();render();toast('Gemt');
+  };
+}
+function addLog(text){const at=Date.now();state.log.push({id:'l'+at+Math.random().toString(36).slice(2,6),who:state.me,at,text});if(state.log.length>300)state.log.shift();}
+function toast(t,ms=1800){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),ms);}
+</script>
+</body>
+</html>

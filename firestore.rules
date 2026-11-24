@@ -1,0 +1,16 @@
+rules_version = '2';
+
+// Kun Emilie og Leon kan læse og skrive i budgettet.
+// Samme liste står i USERS i index.html.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['emilie.asferg@hotmail.dk', 'leonbnnb9940@gmail.com'];
+    }
+    match /{document=**} {
+      allow read, write: if isOwner();
+    }
+  }
+}
