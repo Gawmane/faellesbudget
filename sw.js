@@ -1,7 +1,7 @@
 // Service worker: gør at appen kan installeres og åbner hurtigt, også uden net.
 // Data synkroniseres af Firebase selv; her caches kun selve app-filerne.
 // Hæv VERSION når filerne ændres, så telefonerne henter den nye udgave.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'faellesbudget-' + VERSION;
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon.png'];
