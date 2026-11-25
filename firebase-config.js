@@ -9,3 +9,7 @@ export const firebaseConfig = {
   messagingSenderId: "624637093658",
   appId: "1:624637093658:web:bc2652141ca9c36f55eea3"
 };
+
+// Offentlig nøgle til web-push (Firebase-konsollen → Projektindstillinger → Cloud Messaging →
+// Web Push-certifikater). Heller ikke hemmelig. Tom = notifikationer er ikke sat op endnu.
+export const vapidKey = "";

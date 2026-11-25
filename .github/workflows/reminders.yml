@@ -1,0 +1,31 @@
+name: Påmindelser
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # hver dag kl. 06 UTC (kl. 7 om vinteren, kl. 8 om sommeren i Danmark)
+  workflow_dispatch:
+    inputs:
+      test:
+        description: 'Send en testnotifikation til alle forbundne telefoner'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/notify
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-audit --no-fund --no-save firebase-admin@12.7.0
+      - run: node notify.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TEST: ${{ github.event_name == 'workflow_dispatch' && inputs.test && '1' || '0' }}

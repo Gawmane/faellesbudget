@@ -1,7 +1,7 @@
 // Service worker: gør at appen kan installeres og åbner hurtigt, også uden net.
 // Data synkroniseres af Firebase selv; her caches kun selve app-filerne.
 // Hæv VERSION når filerne ændres, så telefonerne henter den nye udgave.
-const VERSION = 'v17';
+const VERSION = 'v18';
 const CACHE = 'faellesbudget-' + VERSION;
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon.png'];
@@ -39,4 +39,23 @@ self.addEventListener('fetch', e => {
     })));
   }
   // Alt andet (Firebase login og database) går direkte på nettet
+});
+
+// Påmindelser sendt af det daglige job (tools/notify) via Firebase Cloud Messaging
+self.addEventListener('push', e => {
+  let d = {};
+  try { const j = e.data ? e.data.json() : {}; d = j.data || j.notification || j; } catch { d = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || 'Fællesbudget', {
+    body: d.body || '', icon: './icons/icon-192.png', badge: './icons/favicon.png',
+    tag: d.tag || 'faellesbudget', data: { url: d.url || './#check' }
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = new URL(e.notification.data?.url || './#check', self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    for (const c of cs) if (c.url.startsWith(self.registration.scope)) { c.navigate(url); return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });
