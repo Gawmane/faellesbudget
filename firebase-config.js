@@ -12,4 +12,4 @@ export const firebaseConfig = {
 
 // Offentlig nøgle til web-push (Firebase-konsollen → Projektindstillinger → Cloud Messaging →
 // Web Push-certifikater). Heller ikke hemmelig. Tom = notifikationer er ikke sat op endnu.
-export const vapidKey = "";
+export const vapidKey = "BDTTZMHIUbrIFk6WL4e8jlmuJCgSxp-moqNA5Awg4YOhIdJHH7FnKztimv7S0Vf9839O31rlyYinG_VHuNJlSxA";
