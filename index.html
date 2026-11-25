@@ -496,7 +496,7 @@ function home(){
     ${['emilie','leon'].map(p=>{const G=GROUPS[p];return `
     <div class="card tile" data-open="${p}">
       <div class="avatar" style="background:${G.soft};color:${G.color}">${G.initial}</div>
-      <h3><span style="font-weight:400;color:var(--muted);font-size:14px;display:block">Overfør</span>${G.name}</h3><p class="label">${items(p).length} poster</p>
+      <h3><span style="font-weight:400;color:var(--muted);font-size:13px;display:block">Overfør i alt for ${MONTHS[m].toLowerCase()}</span>${G.name}</h3><p class="label">${items(p).length} poster</p>
       <div class="amt" style="font-size:18px">${kr2(xfer(p,Y,m))}</div>
     </div>`}).join('')}
     <div class="card tile wide" data-open="bolig">
@@ -784,15 +784,19 @@ function checkView(){
   const xferRow=p=>{const G=GROUPS[p];return `<div class="xfer">
       <div class="avatar" style="width:36px;height:36px;font-size:14px;background:${G.soft};color:${G.color}">${G.initial}</div>
       <div style="flex:1;min-width:0"><b>Overfør ${G.name}</b>
-        <div class="sub">${[['Egne',sumG(p,Y,m)],['½ bolig',bo],['½ forbrug',fo],['½ uforudset',ex]].filter(([,v])=>v>0).map(([l,v])=>`${l} ${kr2(v)}`).join(' + ')}${(()=>{const c=credit(p,Y,m);return c>0?` − omregning ${kr2(c)}`:c<0?` + omregning ${kr2(-c)}`:'';})()}</div></div>
-      <div class="xamt">${kr2(xfer(p,Y,m))}</div></div>`;};
+        <div class="sub">${[['Egne',sumG(p,Y,m)],['½ bolig',bo],['½ forbrug',fo],['½ uforudset',ex]].filter(([,v])=>v>0).map(([l,v])=>`${l} ${kr2(v)}`).join(' + ')}${(()=>{const c=credit(p,Y,m);return c>0?` − omregning ${kr2(c)}`:c<0?` + omregning ${kr2(-c)}`:'';})()}</div>
+      ${(()=>{const paid=p==='emilie'?st.e:st.l,full=xfer(p,Y,m);
+        return paid>0?`<div class="sub" style="color:var(--ink)">I alt ${kr2(full)} − allerede betalt ${kr2(paid)}</div>`:'';})()}</div>
+      ${(()=>{const rest=xfer(p,Y,m)-(p==='emilie'?st.e:st.l);return rest>0.005?`<div class="xamt">${kr2(rest)}</div>`:`<div class="xamt" style="color:var(--forbrug);font-size:16px"><i class="ti ti-circle-check"></i> Betalt</div>`;})()}</div>`;};
   const adj=adjOf(Y,m);
   const splitTxt={both:'deles 50/50',emilie:'kun Emilie',leon:'kun Leon'};
   return `<div class="back"><h2>Tjekliste</h2></div>
   <div class="card xfercard">
     <div class="row"><p class="label">Overførsel til ${mName(Y,m)} · ${transferDay(Y,m)}</p>${monthNav()}</div>
     ${xferRow('emilie')}${xferRow('leon')}
-    <div class="row" style="margin-top:10px;font-size:14px"><span>I alt til fælleskontoen</span><b>${kr2(xferTotal(Y,m))}</b></div>
+    ${st.e+st.l>0?`<div class="row" style="margin-top:10px;font-size:14px"><span>Mangler at overføre i alt</span><b>${kr2(Math.max(0,xferTotal(Y,m)-st.e-st.l))}</b></div>
+    <p class="label" style="margin-top:2px">I alt til fælleskontoen ${kr2(xferTotal(Y,m))} · allerede betalt ${kr2(st.e+st.l)}</p>`
+    :`<div class="row" style="margin-top:10px;font-size:14px"><span>I alt til fælleskontoen</span><b>${kr2(xferTotal(Y,m))}</b></div>`}
     ${adj.length?`<p class="label" style="margin-top:4px">Udgifter i alt ${kr2(total(Y,m))}${xferTotal(Y,m)<total(Y,m)?` · ${kr2(total(Y,m)-xferTotal(Y,m))} står allerede på kontoen`:` · der mangler ${kr2(xferTotal(Y,m)-total(Y,m))} på kontoen`}</p>`:''}
     <div class="adjlist">
       ${adj.map(a=>`<div class="adj" data-adj="${a.id}">
