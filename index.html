@@ -858,11 +858,13 @@ function openRowNote(key,name){
   const Y=selY(),m=selM(),c=(state.checks[mKey(Y,m)]||{})[key];
   sh.innerHTML=`<h3>${esc(name)}</h3>
     <p class="label" style="margin:-8px 0 14px">${MONTHS[m]} ${Y}${c?` · afkrydset af ${esc(c.by)} ${shortDate(c.at)}`:' · ikke afkrydset endnu'}</p>
+    ${(()=>{const x=state.items.find(i=>i.id===key);return x?.v&&has(val(x,Y,m))?`<button class="adjbtn" id="rBill" style="margin-bottom:12px"><i class="ti ti-pencil"></i> Ret eller slet regningen (${kr2(+val(x,Y,m))})</button>`:'';})()}
     ${notesFor(Y,m,key).map(noteHtml).join('')}
     <div class="field" style="margin-top:12px"><label for="rNote">Ny note</label><textarea id="rNote" placeholder="Fx Betales først d. 15., når lønnen er gået ind"></textarea></div>
     <div class="btns"><button class="btn sec" id="rCancel">Luk</button><button class="btn pri" id="rSave">Gem note</button></div>`;
   bg.classList.add('open');
   document.getElementById('rCancel').onclick=closeSheet;
+  const rb=document.getElementById('rBill');if(rb)rb.onclick=()=>openBill(state.items.find(i=>i.id===key),Y,m,true);
   document.getElementById('rSave').onclick=()=>{if(addNote(document.getElementById('rNote').value,key)){closeSheet();render();toast('Noten er gemt');}};
   sh.querySelectorAll('[data-delnote]').forEach(b=>b.onclick=()=>armed(b,()=>{delNote(b.dataset.delnote);openRowNote(key,name);}));
   setTimeout(()=>document.getElementById('rNote').focus(),50);
@@ -975,7 +977,9 @@ function openBill(x,Y,m,fromCheck){
   q('bCancel').onclick=closeSheet;
   q('bAmt').oninput=()=>q('bErr').style.display='none';
   setTimeout(()=>q('bAmt').focus(),250);
-  if(q('bDel'))q('bDel').onclick=()=>{ensure();x.years[Y][m]=null;x.cover[Y][m]=null;addLog(`Fjernede ${x.name} for ${mName(Y,m)}`);save();closeSheet();render();toast('Beløbet er fjernet');};
+  if(q('bDel'))q('bDel').onclick=()=>armed(q('bDel'),()=>{ensure();x.years[Y][m]=null;x.cover[Y][m]=null;
+    const ck=state.checks[mKey(Y,m)];if(ck?.[x.id])delete ck[x.id];
+    addLog(`Fjernede ${x.name} for ${mName(Y,m)}`);save();closeSheet();const sy=window.scrollY;render();if(fromCheck)window.scrollTo(0,sy);toast('Regningen er slettet');});
   q('bSave').onclick=()=>{
     const raw=q('bAmt').value.replace(',','.');
     if(raw===''||isNaN(parseFloat(raw))){q('bErr').style.display='block';return;}
