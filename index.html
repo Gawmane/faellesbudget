@@ -826,7 +826,7 @@ function checkView(){
       return `<div class="item ${c?'done':''}" data-row="${r.key}" data-rowname="${esc(r.name)}">
         <button class="chk ${c?pCls(c.by):''}" data-chk="${r.key}" aria-label="${c?'Fjern flueben':'Marker som betalt'}: ${esc(r.name)}">${c?(c.by==='Leon'?'L':'E'):''}</button>
         <div class="nm"><span>${esc(r.name)}</span>${ns.length?'<i class="ti ti-message noteicon"></i>':''}
-          <div class="sub">${c?`${r.x?dayPrefix(r.x):''}<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:(r.x?.day?`${dayPrefix(r.x).replace(/ · $/,'')}`:'Tryk for at tilføje en note')}</div>
+          <div class="sub">${c?`${r.x?dayPrefix(r.x):''}<span class="who-${pCls(c.by)}">Afkrydset af ${esc(c.by)}</span> · ${shortDate(c.at)}${GROUPS[s.g]?.shared||s.g==='ekstra'?' · delt 50/50':''}`:(r.x?.day?`${dayPrefix(r.x).replace(/ · $/,'')}`:'Tryk for at tilføje dato eller note')}</div>
           ${ns.map(noteHtml).join('')}
         </div>
         <div class="v">${kr2(r.amt)}${GROUPS[s.g]?.shared||s.g==='ekstra'?halfSub(r.amt):''}</div>
@@ -855,19 +855,27 @@ function addNote(text,row){
   save();return true;
 }
 function openRowNote(key,name){
-  const Y=selY(),m=selM(),c=(state.checks[mKey(Y,m)]||{})[key];
+  const Y=selY(),m=selM(),c=(state.checks[mKey(Y,m)]||{})[key],x=state.items.find(i=>i.id===key);
   sh.innerHTML=`<h3>${esc(name)}</h3>
     <p class="label" style="margin:-8px 0 14px">${MONTHS[m]} ${Y}${c?` · afkrydset af ${esc(c.by)} ${shortDate(c.at)}`:' · ikke afkrydset endnu'}</p>
     ${(()=>{const x=state.items.find(i=>i.id===key);return x?.v&&has(val(x,Y,m))?`<button class="adjbtn" id="rBill" style="margin-bottom:12px"><i class="ti ti-pencil"></i> Ret eller slet regningen (${kr2(+val(x,Y,m))})</button>`:'';})()}
+    ${x?`<div class="field"><label for="rDay">Trækkes fra kontoen</label>${daySelect('rDay',x.day)}</div>`:''}
     ${notesFor(Y,m,key).map(noteHtml).join('')}
     <div class="field" style="margin-top:12px"><label for="rNote">Ny note</label><textarea id="rNote" placeholder="Fx Betales først d. 15., når lønnen er gået ind"></textarea></div>
-    <div class="btns"><button class="btn sec" id="rCancel">Luk</button><button class="btn pri" id="rSave">Gem note</button></div>`;
+    <div class="btns"><button class="btn sec" id="rCancel">Luk</button><button class="btn pri" id="rSave">Gem</button></div>`;
   bg.classList.add('open');
   document.getElementById('rCancel').onclick=closeSheet;
   const rb=document.getElementById('rBill');if(rb)rb.onclick=()=>openBill(state.items.find(i=>i.id===key),Y,m,true);
-  document.getElementById('rSave').onclick=()=>{if(addNote(document.getElementById('rNote').value,key)){closeSheet();render();toast('Noten er gemt');}};
+  document.getElementById('rSave').onclick=()=>{
+    const msgs=[];
+    if(x){const d=readDay(document.getElementById('rDay').value);
+      if(d!==(x.day??null)){x.day=d;x.by=state.me;x.at=Date.now();addLog(`${x.name}: trækdato ændret til ${d?dayTxt(x):'ingen fast dato'}`);msgs.push('Datoen er gemt');}}
+    const txt=document.getElementById('rNote').value;
+    if(txt.trim()&&addNote(txt,key))msgs.push('Noten er gemt');
+    if(msgs.includes('Datoen er gemt'))save();
+    const sy=window.scrollY;closeSheet();render();window.scrollTo(0,sy);toast(msgs.join(' · ')||'Ingen ændringer');
+  };
   sh.querySelectorAll('[data-delnote]').forEach(b=>b.onclick=()=>armed(b,()=>{delNote(b.dataset.delnote);openRowNote(key,name);}));
-  setTimeout(()=>document.getElementById('rNote').focus(),50);
 }
 function openAdjust(a){
   const isNew=!a,Y=a?a.y:selY(),m=a?a.m:selM();
