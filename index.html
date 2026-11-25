@@ -51,6 +51,8 @@ header.hero{background:var(--accent);color:#fff;margin:0 -16px;padding:28px 20px
 .bars button:hover .tip,.bars button:focus-visible .tip{opacity:1}
 .await{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border-radius:14px;padding:10px 12px;margin-top:12px;font-size:13px;line-height:1.35;cursor:pointer}
 .await i{font-size:20px}
+.remind{display:flex;align-items:center;gap:10px;background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn);border-radius:14px;padding:10px 12px;margin-bottom:12px;font-size:13px;line-height:1.4;cursor:pointer}
+.remind>i{font-size:22px}.remind b{font-size:14px}.remind .sub{color:var(--warn);opacity:.9}
 .split{display:flex;height:12px;border-radius:99px;overflow:hidden;margin:12px 0}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
@@ -445,8 +447,40 @@ function render(keep){
   else if(r[0]==='year')v.innerHTML=yearPage();
   else if(r[0]==='log')v.innerHTML=logView();
   else v.innerHTML=home();
+  v.insertAdjacentHTML('afterbegin',remindBanner());
   bind();
   if(!keep)window.scrollTo(0,0);
+}
+
+/* Påmindelser: poster med trækdato, der ikke er krydset af. Vises fra dagen før trækket.
+   Egne poster vises kun for ejeren, fælles poster (bolig/forbrug) for begge. */
+function drawDate(x,Y,m){
+  if(x.day==='last')return lastBankDate(Y,m);
+  return new Date(Y,m,Math.min(+x.day,new Date(Y,m+1,0).getDate()));
+}
+function reminders(){
+  const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),ci=idx(today.getFullYear(),today.getMonth());
+  const me=state.me==='Leon'?'leon':'emilie',out=[];
+  for(let i=ci;i<=Math.min(ci+1,MAX_IDX);i++){
+    const {Y,m}=fromIdx(i);if(!active(Y,m)||isTrial(Y,m))continue;
+    const ch=state.checks[mKey(Y,m)]||{};
+    for(const x of state.items){
+      if(!x.day||ch[x.id])continue;
+      if(x.g!==me&&!GROUPS[x.g]?.shared)continue;
+      const v=val(x,Y,m);if(!(+v>0))continue;
+      const d=drawDate(x,Y,m),from=new Date(d);from.setDate(from.getDate()-1);
+      if(today<from)continue;
+      out.push({x,Y,m,d,amt:+v,late:today>d,isToday:+today===+d});
+    }
+  }
+  return out.sort((a,b)=>a.d-b.d);
+}
+function remindBanner(){
+  const rs=reminders();if(!rs.length)return '';
+  const when=r=>r.late?'skulle være trukket '+r.d.getDate()+'. '+M3[r.d.getMonth()]:r.isToday?'trækkes i dag':'trækkes i morgen';
+  return `<div class="remind" data-remind="${idx(rs[0].Y,rs[0].m)}"><i class="ti ti-bell-ringing"></i><div style="flex:1;min-width:0">
+    <b>Husk at betale</b>${rs.map(r=>`<div class="sub">${esc(r.x.name)} · ${kr2(r.amt)}${GROUPS[r.x.g]?.shared?' (fælles)':''} · ${when(r)}</div>`).join('')}
+    </div><i class="ti ti-chevron-right"></i></div>`;
 }
 
 function monthNav(){
@@ -944,6 +978,7 @@ function bind(){
   $$('[data-extra]').forEach(b=>b.onclick=()=>openExtra(state.extras.find(e=>e.id===b.dataset.extra)));
   $$('[data-newextra]').forEach(b=>b.onclick=()=>openExtra(null));
   $$('[data-pick]').forEach(b=>b.onclick=()=>{sel=+b.dataset.pick;go('home');});
+  $$('[data-remind]').forEach(b=>b.onclick=()=>{sel=+b.dataset.remind;if(location.hash==='#check')render();else go('check');});
   $$('[data-pendbill]').forEach(b=>b.onclick=()=>openBill(state.items.find(i=>i.id===b.dataset.pendbill),selY(),selM(),true));
   $$('[data-newadj]').forEach(b=>b.onclick=()=>openAdjust(null));
   $$('[data-adj]').forEach(b=>b.onclick=()=>openAdjust(state.adjust.find(a=>a.id===b.dataset.adj)));
